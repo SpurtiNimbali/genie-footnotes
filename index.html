@@ -1,0 +1,1707 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Genie Footnotes</title>
+<style>
+/* styles/01-tokens.css */
+/* Tokens: Databricks dark UI (DuBois dark values, checked against the trial) */
+:root {
+  --bg: #11171C;
+  --bg-side: #161D23;
+  --surface: #182026;
+  --surface-2: #1E272E;
+  --hover: #222C34;
+  --line: #273038;
+  --line-soft: #1F272E;
+  --text: #E8ECF0;
+  --text-2: #A3AEB8;
+  --text-3: #74828E;
+  --blue: #4299E0;
+  --blue-ink: #FFFFFF;
+  --blue-soft: rgba(66, 153, 224, 0.14);
+  --link: #6DB3EE;
+  --bubble: #0B3A5D;
+  --amber: #F2B33D;
+  --amber-soft: rgba(242, 179, 61, 0.12);
+  --green: #4CC38A;
+  --green-soft: rgba(76, 195, 138, 0.12);
+  --violet: #CA42E0;
+  --violet-soft: rgba(202, 66, 224, 0.10);
+  --ai: linear-gradient(135deg, #4299E0 0%, #CA42E0 55%, #FF5F46 100%);
+  --series: #077A9D;
+  --series-hi: #1595BD;
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --r-sm: 6px; --r-md: 8px; --r-lg: 12px;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --shadow: 0 16px 40px -12px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.04);
+  color-scheme: dark;
+}
+
+/* styles/02-base.css */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  background: var(--bg); color: var(--text);
+  font: 13px/1.5 var(--font);
+  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+}
+button { font: inherit; color: inherit; }
+b { font-weight: 600; }
+:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; border-radius: 4px; }
+
+/* Motion */
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes pop { from { opacity: 0; transform: translate(-50%, -48%) scale(0.98); } to { opacity: 1; transform: translate(-50%, -50%); } }
+@keyframes drop { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+@keyframes slide { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: none; } }
+@keyframes toast { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@keyframes blink { 0%, 80%, 100% { opacity: 0.25; } 40% { opacity: 1; } }
+@keyframes hint { 0% { box-shadow: 0 0 0 0 rgba(66, 153, 224, 0.55); } 100% { box-shadow: 0 0 0 7px rgba(66, 153, 224, 0); } }
+.enter { animation: rise 360ms var(--ease) both; }
+.no-anim *, .no-anim *::before, .no-anim *::after { animation: none !important; transition: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 1ms !important; transition-duration: 1ms !important; }
+}
+
+/* styles/03-chrome.css */
+/* Workspace chrome + walkthrough control */
+.app { position: fixed; inset: 0; display: grid; grid-template-rows: 44px minmax(0, 1fr); grid-template-columns: 184px minmax(0, 1fr); }
+.top {
+  grid-column: 1 / -1; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+  padding: 0 14px; border-bottom: 1px solid var(--line-soft); background: var(--bg);
+}
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 15px; letter-spacing: -0.02em; }
+.brand-mark { width: 22px; height: 22px; border-radius: 6px; background: var(--surface-2); display: grid; place-items: center; }
+.brand-mark svg { width: 13px; height: 13px; }
+.search {
+  width: 320px; height: 28px; border: 1px solid var(--line); border-radius: var(--r-sm);
+  display: flex; align-items: center; gap: 8px; padding: 0 10px; color: var(--text-3);
+}
+.search svg { width: 13px; height: 13px; }
+.top-r { display: flex; justify-content: flex-end; }
+.avatar { width: 24px; height: 24px; border-radius: 50%; background: #1F8A5B; color: #fff; display: grid; place-items: center; font-size: 11.5px; font-weight: 600; }
+
+.side { background: var(--bg-side); padding: 12px 8px; display: flex; flex-direction: column; gap: 2px; border-right: 1px solid var(--line-soft); }
+.nav { display: flex; align-items: center; gap: 10px; height: 30px; padding: 0 10px; border-radius: var(--r-sm); color: var(--text-2); }
+.nav svg { width: 15px; height: 15px; opacity: 0.85; }
+.nav.on { background: var(--blue-soft); color: var(--link); }
+.nav-h { font-size: 11.5px; color: var(--text-3); padding: 14px 10px 4px; }
+
+.stage { position: relative; overflow: hidden; min-width: 0; }
+.scene { position: absolute; inset: 0; display: flex; flex-direction: column; }
+.scene.enter-scene { animation: fade 320ms var(--ease) both; }
+
+/* Walkthrough timeline (bottom center): two chapters, one dot per beat */
+.tl {
+  position: fixed; left: calc(50% + 92px); bottom: 18px; transform: translateX(-50%); z-index: 100;
+  display: flex; align-items: center; gap: 14px; padding: 8px 10px;
+  background: rgba(17, 23, 28, 0.86); border: 1px solid var(--line); border-radius: 14px;
+  box-shadow: 0 14px 34px -14px rgba(0, 0, 0, 0.75); backdrop-filter: blur(10px);
+}
+.tl-btn {
+  width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--line); background: transparent;
+  color: var(--text-2); display: grid; place-items: center; cursor: pointer; transition: background 150ms var(--ease), color 150ms;
+}
+.tl-btn:hover { background: var(--hover); color: var(--text); }
+.tl-btn svg { width: 14px; height: 14px; }
+.tl-btn:disabled { opacity: 0.3; cursor: default; }
+.tl-next { background: var(--blue); border-color: var(--blue); color: #fff; }
+.tl-next:hover { background: #5AA8E6; color: #fff; }
+.tl-ch { display: grid; gap: 5px; justify-items: start; }
+.tl-dots { display: flex; gap: 5px; align-items: center; height: 10px; }
+.tl-dot { width: 6px; height: 6px; padding: 0; border: 0; border-radius: 3px; background: #3A4651; cursor: pointer; transition: width 260ms var(--ease), background 200ms; }
+.tl-dot.done { background: #74828E; }
+.tl-dot.cur { width: 18px; background: var(--blue); }
+.tl-l { font-size: 11px; color: var(--text-3); letter-spacing: 0.01em; transition: color 200ms; white-space: nowrap; }
+.tl-ch.on .tl-l { color: var(--text); }
+.tl-ba {
+  position: fixed; right: 20px; bottom: 22px; z-index: 100; display: flex; padding: 3px;
+  background: rgba(17, 23, 28, 0.86); border: 1px solid var(--line); border-radius: 10px;
+  box-shadow: 0 14px 34px -14px rgba(0, 0, 0, 0.75); backdrop-filter: blur(10px);
+}
+.tl-ba[hidden] { display: none; }
+.tl-ba button { height: 28px; padding: 0 12px; border: 0; border-radius: 7px; background: none; color: var(--text-2); cursor: pointer; font-size: 12.5px; }
+.tl-ba button[aria-pressed="true"] { background: var(--surface-2); color: var(--text); }
+
+/* Chapter card */
+.chapter {
+  position: absolute; inset: 0; z-index: 60; display: grid; place-items: center; pointer-events: none;
+  background: rgba(17, 23, 28, 0.72); backdrop-filter: blur(3px);
+  animation: chapter 1500ms var(--ease) both;
+}
+.chapter span { font-size: 22px; font-weight: 600; letter-spacing: -0.01em; padding-bottom: 10px; position: relative; }
+.chapter span::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; border-radius: 1px; background: var(--ai); transform-origin: left; animation: grow 700ms var(--ease) 150ms both; }
+@keyframes chapter { 0% { opacity: 0; } 18% { opacity: 1; } 75% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+/* Before → after wipe */
+.wipe-old { z-index: 40; pointer-events: none; background: var(--bg); clip-path: inset(0 0 0 0); transition: clip-path 1000ms cubic-bezier(0.65, 0, 0.35, 1); }
+.wipe-line {
+  position: absolute; top: 0; bottom: 0; left: 0; width: 2px; z-index: 41; pointer-events: none;
+  background: linear-gradient(180deg, #4299E0, #CA42E0, #FF5F46);
+  box-shadow: 0 0 22px 3px rgba(202, 66, 224, 0.45);
+  transition: left 1000ms cubic-bezier(0.65, 0, 0.35, 1), opacity 300ms 850ms;
+}
+
+/* "Click here" affordance */
+.hint { animation: hint 1.6s var(--ease) infinite; }
+
+/* styles/04-components.css */
+/* ---------- Genie page ---------- */
+.g-head {
+  height: 52px; flex: none; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+  padding: 0 16px; border-bottom: 1px solid var(--line-soft);
+}
+.g-title { display: flex; align-items: center; gap: 8px; min-width: 0; font-weight: 600; font-size: 14px; }
+.g-title span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tag { display: inline-flex; align-items: center; gap: 5px; height: 20px; padding: 0 7px; border-radius: 4px; background: var(--surface-2); color: var(--text-2); font-size: 11.5px; font-weight: 500; white-space: nowrap; }
+.tag svg { width: 11px; height: 11px; }
+.tag.amber { background: var(--amber-soft); color: var(--amber); }
+.tag.green { background: var(--green-soft); color: var(--green); }
+.tag.blue { background: var(--blue-soft); color: var(--link); }
+.tabs { display: flex; gap: 2px; padding: 3px; border-radius: 9px; background: var(--surface); }
+.tab { height: 26px; padding: 0 12px; border-radius: 7px; display: grid; place-items: center; color: var(--text-2); }
+.tab.on { background: var(--bg); color: var(--text); box-shadow: inset 0 0 0 1px var(--line); }
+.g-actions { display: flex; justify-content: flex-end; gap: 8px; }
+
+.btn {
+  height: 30px; padding: 0 14px; border-radius: 15px; border: 1px solid var(--line);
+  background: transparent; color: var(--text); cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+  font-weight: 500; white-space: nowrap; transition: background 150ms var(--ease), border-color 150ms var(--ease);
+}
+.btn:hover { background: var(--hover); }
+.btn svg { width: 13px; height: 13px; }
+.btn.primary { background: var(--blue); border-color: var(--blue); color: #fff; }
+.btn.primary:hover { background: #5AA8E6; }
+.btn.sm { height: 26px; padding: 0 10px; border-radius: 13px; font-size: 12.5px; }
+.btn.on { background: var(--blue-soft); border-color: rgba(66, 153, 224, 0.5); color: var(--link); }
+.btn.ghost { border-color: transparent; color: var(--text-2); }
+.btn.ghost:hover { color: var(--text); }
+.btn .sparkle { color: var(--violet); }
+
+.g-body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.thread { flex: 1; min-height: 0; overflow-y: auto; scroll-behavior: smooth; scrollbar-width: none; }
+.thread::-webkit-scrollbar { display: none; }
+.col { width: min(720px, calc(100% - 64px)); margin: 0 auto; padding: 28px 0 24px; display: flex; flex-direction: column; gap: 18px; }
+
+.home { flex: 1; display: grid; place-items: center; padding-bottom: 80px; }
+.home-in { width: min(560px, calc(100% - 64px)); text-align: center; }
+.home h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+.home p { margin: 6px 0 22px; color: var(--text-2); }
+.q-list { margin-top: 18px; text-align: left; }
+.q { display: block; width: 100%; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--line-soft); padding: 11px 4px; color: var(--text-2); cursor: pointer; border-radius: 0; }
+.q:hover { color: var(--text); }
+.q.hint { color: var(--text); border-radius: 6px; }
+
+.input {
+  min-height: 46px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface);
+  display: flex; align-items: center; gap: 10px; padding: 0 12px 0 14px; color: var(--text-3); text-align: left;
+}
+.input .draft { color: var(--text); flex: 1; white-space: nowrap; overflow: hidden; }
+.input .ph { flex: 1; }
+.input svg { width: 15px; height: 15px; color: var(--text-3); }
+.input .caret { display: inline-block; width: 1px; height: 15px; background: var(--text); margin-left: 1px; vertical-align: -3px; animation: blink 1s infinite; }
+.dock { flex: none; padding: 0 0 84px; }
+.dock .input { width: min(720px, calc(100% - 64px)); margin: 0 auto; }
+.disc { text-align: center; color: var(--text-3); font-size: 11.5px; margin-top: 8px; }
+
+.msg-user { align-self: flex-end; max-width: 75%; background: var(--bubble); color: #fff; padding: 9px 14px; border-radius: 14px; }
+.msg-genie { display: flex; flex-direction: column; gap: 10px; }
+.who { display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 12.5px; }
+.who svg { width: 14px; height: 14px; }
+.who .tp { color: var(--text-3); font-weight: 400; margin-left: 4px; }
+.say { font-size: 14px; line-height: 1.55; color: var(--text); }
+.say b { color: #fff; }
+.dots { display: inline-flex; gap: 4px; padding: 6px 0; }
+.dots i { width: 5px; height: 5px; border-radius: 50%; background: var(--text-2); animation: blink 1.2s infinite; }
+.dots i:nth-child(2) { animation-delay: 0.15s; }
+.dots i:nth-child(3) { animation-delay: 0.3s; }
+
+/* ---------- Cards ---------- */
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; }
+.card-h { display: flex; align-items: center; gap: 10px; padding: 12px 12px 0 16px; }
+.card-t { font-weight: 600; }
+.card-s { color: var(--text-3); font-size: 12.5px; padding: 2px 16px 0; display: flex; gap: 8px; align-items: baseline; min-height: 20px; }
+.card-s .d { color: #FF8F80; font-weight: 600; }
+.card-s .was { color: var(--text-3); margin-left: 2px; }
+.card-h .sp { flex: 1; }
+.lnk { color: var(--link); font-size: 12.5px; cursor: default; }
+.chart { width: 100%; flex: none; }
+
+.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+.tbl th { text-align: left; font-weight: 500; color: var(--text-3); padding: 8px 16px; border-bottom: 1px solid var(--line); }
+.tbl td { padding: 8px 16px; border-bottom: 1px solid var(--line-soft); }
+.tbl tr:last-child td { border-bottom: 0; }
+.tbl .r { text-align: right; }
+.tbl tr.thin td { color: var(--text-3); }
+.nbar { display: inline-flex; align-items: center; gap: 10px; }
+.nbar i { display: block; height: 4px; border-radius: 2px; background: var(--series-hi); }
+.tbl tr.thin .nbar i { background: #3A4651; }
+
+/* ---------- Modal ---------- */
+.scrim { position: absolute; inset: 0; background: rgba(5, 9, 12, 0.6); z-index: 20; animation: fade 220ms var(--ease) both; }
+.modal {
+  position: absolute; z-index: 21; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: 480px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg);
+  box-shadow: var(--shadow); padding: 22px 22px 20px; display: flex; flex-direction: column; gap: 18px;
+  animation: pop 260ms var(--ease) both;
+}
+.modal h2 { margin: 0; font-size: 17px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
+.modal h2 .x svg { width: 14px; height: 14px; color: var(--text-3); display: block; }
+.field { display: grid; gap: 6px; }
+.field label { font-size: 12px; color: var(--text-2); }
+.select { height: 34px; border: 1px solid var(--line); border-radius: var(--r-sm); display: flex; align-items: center; justify-content: space-between; padding: 0 10px; background: var(--bg); }
+.select svg { width: 13px; height: 13px; color: var(--text-3); }
+.ai-box {
+  border: 1px solid transparent; border-radius: var(--r-md);
+  background: linear-gradient(var(--surface), var(--surface)) padding-box, var(--ai) border-box;
+}
+.ai-box-h { display: grid; gap: 3px; padding: 14px 16px 12px; }
+.ai-t { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.ai-t svg { width: 14px; height: 14px; }
+.ai-s { color: var(--text-3); font-size: 12px; }
+.row { display: flex; align-items: center; gap: 12px; padding: 11px 16px; border-top: 1px solid var(--line-soft); }
+.row b { font-weight: 500; }
+.opt-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 2px 2px 0; }
+.opt-row .muted { font-size: 12px; margin-top: 2px; }
+.row .grow { flex: 1; }
+.cbx { width: 15px; height: 15px; border-radius: 4px; background: var(--blue); display: grid; place-items: center; flex: none; }
+.cbx svg { width: 11px; height: 11px; color: #fff; }
+.switch { width: 30px; height: 17px; border-radius: 9px; background: #3A4550; position: relative; flex: none; transition: background 200ms var(--ease); }
+.switch::after { content: ""; position: absolute; top: 2.5px; left: 3px; width: 12px; height: 12px; border-radius: 50%; background: #fff; transition: transform 220ms var(--ease); }
+.switch.on { background: var(--blue); }
+.switch.on::after { transform: translateX(12px); }
+.modal-f { display: flex; justify-content: flex-end; gap: 8px; }
+.muted { color: var(--text-3); }
+
+/* ---------- Toast ---------- */
+.toast {
+  position: absolute; left: 50%; bottom: 72px; transform: translateX(-50%); z-index: 30;
+  display: flex; align-items: center; gap: 8px; padding: 9px 14px; border-radius: var(--r-md);
+  background: #E8ECF0; color: #11171C; font-weight: 500; box-shadow: var(--shadow); white-space: nowrap;
+  animation: toast 300ms var(--ease) both;
+}
+.toast svg { width: 14px; height: 14px; color: #1F8A5B; }
+
+/* ---------- Dashboard ---------- */
+.d-head { flex: none; display: flex; align-items: center; gap: 10px; padding: 18px 24px 14px; }
+.d-head h1 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
+.d-head .sp { flex: 1; }
+.d-meta { color: var(--text-3); font-size: 12px; margin-right: 6px; }
+.d-grid { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(320px, 1fr) minmax(0, 2fr); gap: 16px; padding: 4px 24px 96px; align-content: start; grid-auto-rows: max-content; overflow-y: auto; scrollbar-width: none; }
+.d-grid::-webkit-scrollbar { display: none; }
+.w-rev-slot { grid-column: 1 / -1; }
+.w-rev-slot:empty { display: none; }
+.widget { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); display: flex; flex-direction: column; overflow: hidden; }
+.widget .card-h { padding-top: 14px; }
+
+/* ---------- Ask Genie panel ---------- */
+.panel {
+  position: absolute; top: 0; right: 0; bottom: 0; width: 380px; z-index: 15;
+  background: var(--bg); border-left: 1px solid var(--line); display: flex; flex-direction: column;
+  animation: slide 300ms var(--ease) both; box-shadow: -20px 0 40px -20px rgba(0, 0, 0, 0.6);
+}
+.panel-h { height: 52px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 16px; border-bottom: 1px solid var(--line-soft); font-weight: 600; }
+.panel-h svg { width: 15px; height: 15px; }
+.panel-h .x { margin-left: auto; color: var(--text-3); }
+.panel-b { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+.panel .msg-user { max-width: 90%; }
+.panel .say { font-size: 13.5px; }
+.cmp { display: grid; grid-template-columns: 1fr auto; gap: 6px 16px; padding: 12px 14px; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--line); font-size: 13px; }
+.cmp .k { color: var(--text-2); }
+.cmp .v { text-align: right; }
+.cmp .d { color: #FF8F80; font-weight: 600; }
+.note-bar { border-left: 2px solid var(--violet); background: var(--violet-soft); padding: 8px 12px; border-radius: 0 6px 6px 0; color: var(--text); display: flex; align-items: center; gap: 8px; }
+.note-bar .fm { margin: 0; }
+.panel-in { margin: 0 16px 16px; height: 40px; border: 1px solid var(--line); border-radius: 10px; display: flex; align-items: center; padding: 0 12px; color: var(--text-3); }
+
+/* ---------- Definition chip + popover ---------- */
+.def { position: relative; display: inline-flex; }
+.def-btn { height: 28px; padding: 0 10px; border-radius: 14px; border: 1px solid var(--line); background: none; color: var(--text-2); display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.def-btn b { color: var(--text); font-weight: 500; }
+.def-btn svg { width: 12px; height: 12px; }
+.pop {
+  position: absolute; top: 36px; left: 0; z-index: 10; width: 320px; padding: 6px;
+  background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--shadow);
+  animation: drop 220ms var(--ease) both;
+}
+.opt { display: grid; grid-template-columns: 14px 1fr auto; gap: 12px; align-items: center; padding: 10px 10px; border-radius: 6px; width: 100%; background: none; border: 0; color: var(--text); text-align: left; cursor: pointer; }
+.opt:hover { background: var(--hover); }
+.pop-h { font-size: 11.5px; color: var(--text-3); padding: 8px 10px 4px; }
+.pop-f { font-size: 11.5px; color: var(--text-3); padding: 10px 10px 6px; border-top: 1px solid var(--line-soft); margin-top: 4px; line-height: 1.45; }
+.opt .rd { width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid #5D6A75; display: grid; place-items: center; }
+.opt.on { background: var(--hover); }
+.opt.on .rd { border-color: var(--blue); }
+.opt.on .rd::after { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--blue); }
+.opt small { display: block; color: var(--text-3); font-size: 11.5px; }
+.opt .n { font-size: 16px; font-weight: 600; }
+
+/* ---------- End card ---------- */
+.end { position: absolute; inset: 0; display: grid; place-items: center; background: var(--bg); z-index: 50; animation: fade 400ms var(--ease) both; }
+.end-in { text-align: center; display: grid; gap: 6px; justify-items: center; }
+.end h1 { margin: 0; font-size: 30px; font-weight: 700; letter-spacing: -0.02em; }
+.end h1 span { background: var(--ai); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.end p { margin: 0; color: var(--text-2); font-size: 14px; }
+.end .by { color: var(--text); margin-top: 8px; }
+.end .btn { margin-top: 18px; }
+
+/* Reviews answer card */
+.rev-main { display: flex; align-items: center; gap: 14px; padding: 18px 16px 4px 20px; }
+.rev-main .sp { flex: 1; }
+.rev-num { display: flex; align-items: baseline; gap: 8px; }
+.rev-num span { font-size: 40px; font-weight: 600; letter-spacing: -0.03em; line-height: 1; min-width: 1.2em; }
+.rev-num small { font-size: 14px; color: var(--text-2); }
+.rev-sub { color: var(--text-3); font-size: 13px; }
+.card.rev { overflow: visible; }
+.rev-def { padding: 10px 20px 18px; }
+.rev-def:empty { display: none; }
+.def-btn .fm { margin-right: 2px; }
+
+/* Message (outside the product) */
+.im {
+  position: absolute; right: 24px; bottom: 96px; z-index: 12; width: 320px;
+  display: grid; grid-template-columns: 34px 1fr; gap: 12px; padding: 14px 16px;
+  background: #FFFFFF; color: #1D1C1D; border-radius: 12px; box-shadow: 0 20px 44px -14px rgba(0, 0, 0, 0.7);
+  animation: rise 420ms var(--ease) both;
+}
+.im-av { width: 34px; height: 34px; border-radius: 8px; background: #E9DFD3; color: #5A4632; display: grid; place-items: center; font-weight: 700; font-size: 12px; }
+.im-n { font-weight: 700; font-size: 13px; }
+.im-n span { font-weight: 400; color: #6B6A6B; font-size: 12px; margin-left: 4px; }
+.im-t { font-size: 14px; line-height: 1.45; margin-top: 2px; }
+
+/* Reviews widget: count + definition context */
+.rw { display: grid; grid-template-columns: minmax(220px, 300px) minmax(0, 1fr); gap: 48px; align-items: center; padding: 14px 24px 22px 20px; }
+.rw-bare { grid-template-columns: 1fr; padding-bottom: 26px; }
+.rw-num { display: flex; align-items: baseline; gap: 10px; }
+.rw-num [data-rcount] { font-size: 52px; font-weight: 600; letter-spacing: -0.035em; line-height: 1; min-width: 1.2em; }
+.rw-num small { color: var(--text-2); font-size: 14px; }
+.rw-d { display: flex; align-items: center; gap: 8px; margin-top: 12px; color: var(--text); font-size: 13px; }
+.rw-bare .rw-d { color: var(--text-3); margin-top: 8px; }
+.rw-defs { display: grid; gap: 4px; }
+.rw-h { color: var(--text-3); font-size: 12px; margin: 0 0 6px 10px; }
+.rw-row {
+  display: grid; grid-template-columns: 220px minmax(0, 1fr) 32px; gap: 16px; align-items: center;
+  padding: 8px 10px; border: 0; border-radius: 8px; background: none; color: var(--text-2); text-align: left; cursor: pointer;
+  transition: background 200ms var(--ease), color 200ms var(--ease);
+}
+.rw-row:hover { background: var(--hover); }
+.rw-row.on { background: var(--blue-soft); color: var(--text); }
+.rw-bar { height: 6px; border-radius: 3px; background: #222C34; overflow: hidden; }
+.rw-bar i { display: block; height: 100%; border-radius: 3px; background: #3E4A55; transition: background 260ms var(--ease); }
+.rw-row.on .rw-bar i { background: var(--blue); }
+.rw-v { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* KPI tile */
+.kpi-body { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 12px; padding: 10px 24px 28px; }
+.kpi-n { font-size: 54px; font-weight: 600; letter-spacing: -0.035em; line-height: 1; font-variant-numeric: tabular-nums; }
+.kpi-d { display: flex; align-items: center; gap: 8px; font-size: 15px; flex-wrap: wrap; }
+.kpi-d .down { color: #FF8F80; font-weight: 600; font-variant-numeric: tabular-nums; }
+.kpi-d .vs { color: var(--text-3); font-size: 13px; }
+.kpi-s { color: var(--text-3); font-size: 12.5px; }
+.kpi-w .fn-row { flex-wrap: wrap; row-gap: 10px; }
+.kpi-w .fn-acts { width: 100%; padding-left: 30px; }
+.kpi-w [data-slot="k-body"] { flex: 1; display: flex; }
+
+/* Reviews widget v2: decision flagged, alternatives on demand */
+.rw2 { display: grid; grid-template-columns: minmax(260px, 1fr) minmax(0, 2fr); align-items: center; padding: 6px 8px 14px 20px; }
+.rw2.rw-bare { grid-template-columns: 1fr; padding: 10px 20px 26px; }
+.rw2 .rw-num { display: flex; align-items: baseline; gap: 10px; }
+.rw2 .rw-num .fm { align-self: flex-start; margin: 2px 0 0 -4px; }
+.widget.rw-w { overflow: visible; }
+.rw2 .rw-d { display: flex; align-items: center; gap: 8px; margin-top: 10px; color: var(--text-2); font-size: 13px; }
+.rw-notes { position: relative; padding-left: 8px; }
+.rw-notes::before { content: ""; position: absolute; left: 0; top: 10px; bottom: 10px; width: 1px; background: linear-gradient(180deg, #4299E0, #CA42E0, #FF5F46); opacity: 0.5; }
+.lnk-btn { display: inline-flex; align-items: center; gap: 4px; height: 26px; padding: 0 8px; border: 0; border-radius: 6px; background: none; color: var(--link); font: inherit; font-size: 12.5px; cursor: pointer; white-space: nowrap; }
+.lnk-btn:hover { background: var(--blue-soft); }
+.lnk-btn svg { width: 12px; height: 12px; }
+.def-wrap { position: relative; }
+.pop-up { top: auto; bottom: 34px; left: auto; right: 0; }
+
+/* ===== Dashboard: matches the existing AI/BI published view ===== */
+.d-head { padding: 14px 20px 10px 24px; gap: 10px; }
+.d-head h1 { font-size: 20px; }
+.d-head .star { color: var(--text-3); display: grid; }
+.d-head .star svg { width: 15px; height: 15px; }
+.d-meta { display: inline-flex; align-items: center; gap: 6px; color: var(--text-3); font-size: 12px; margin-right: 6px; }
+.d-meta svg { width: 12px; height: 12px; }
+.d-meta .dot { opacity: 0.5; margin: 0 2px; }
+.w-ico { width: 26px; height: 26px; border-radius: 6px; display: inline-grid; place-items: center; color: var(--text-3); }
+.w-ico svg { width: 14px; height: 14px; }
+.d-tabs { flex: none; display: flex; gap: 18px; padding: 0 24px; border-bottom: 1px solid var(--line-soft); }
+.d-tab { height: 32px; display: inline-flex; align-items: center; font-size: 13px; color: var(--text-2); border-bottom: 2px solid transparent; }
+.d-tab.on { color: var(--text); font-weight: 600; border-bottom-color: #86CAFF; }
+.d-canvas { flex: 1; min-height: 0; background: #1A2126; display: flex; flex-direction: column; overflow-y: auto; scrollbar-width: none; padding: 12px 16px 96px; gap: 12px; }
+.d-canvas::-webkit-scrollbar { display: none; }
+.d-filters { display: flex; gap: 8px; flex: none; }
+.d-filter { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px; border-radius: 4px; background: var(--bg); border: 1px solid var(--line); color: var(--text-2); font-size: 12.5px; }
+.d-filter b { color: var(--text); font-weight: 500; }
+.d-filter svg { width: 13px; height: 13px; }
+.d-grid { flex: none; display: grid; grid-template-columns: minmax(340px, 1.15fr) minmax(0, 2fr); grid-auto-rows: auto; gap: 12px; padding: 0; overflow: visible; min-height: 0; align-content: start; }
+.d-col { display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+.d-col > .widget, .d-col .w-rev-slot > .widget { flex: 1; }
+.w-rev-slot { display: contents; grid-column: auto; }
+.widget { background: var(--bg); border: 1px solid #262F37; border-radius: 4px; }
+.widget.w-chart { height: 480px; }
+.d-col { height: 480px; }
+.w-h { display: flex; align-items: center; gap: 8px; padding: 12px 8px 4px 14px; flex: none; }
+.w-t { font-weight: 600; font-size: 13px; flex: 1; min-width: 0; }
+.w-acts { display: flex; gap: 2px; opacity: 0.85; }
+
+/* Counter widget */
+.ct-wrap { flex: 1; display: grid; place-items: center; min-height: 0; padding: 4px 16px 8px; }
+.ct { text-align: center; display: grid; gap: 8px; justify-items: center; }
+.ct-v { display: inline-flex; align-items: flex-start; gap: 4px; font-size: 46px; font-weight: 600; letter-spacing: -0.03em; line-height: 1; font-variant-numeric: tabular-nums; }
+.ct-v .fm { margin-top: 4px; }
+.ct-c { display: inline-flex; align-items: center; gap: 6px; color: var(--text-3); font-size: 13px; }
+.ct-c .down { color: #FF8F80; font-weight: 600; font-variant-numeric: tabular-nums; }
+.rw-w .ct-v { font-size: 40px; }
+
+/* One footnote line per widget */
+.wfn { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 6px 8px 6px 14px; border-top: 1px solid var(--line-soft); font-size: 12.5px; flex: none; }
+.wfn + .wfn { border-top-style: dashed; }
+.wfn .fm { width: 15px; height: 15px; font-size: 9.5px; }
+.wfn-t { flex: 1; min-width: 0; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wfn-a { display: flex; align-items: center; gap: 2px; flex: none; }
+.lnk-btn.on { color: var(--text); }
+.wfn .more { margin-left: 4px; background: none; border: 1px solid var(--line); color: var(--text-3); height: 22px; border-radius: 11px; }
+
+/* Top 5 widget + tied list */
+.w-top-slot { grid-column: 1 / -1; }
+.w-top-slot:empty { display: none; }
+.w-top .chart { padding: 0 8px; }
+.card { overflow: visible; }
+.card-t sup.fm, .w-t sup.fm { vertical-align: 5px; }
+.pop-ties { width: 460px; left: auto; right: 0; }
+.ties { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; padding: 2px 10px 6px; max-height: 280px; overflow: auto; }
+.tie { display: flex; justify-content: space-between; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--line-soft); font-size: 12.5px; color: var(--text-2); }
+.tie.shown { color: var(--text); }
+.tie span:last-child { white-space: nowrap; }
+.tie.shown span:first-child::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--amber); margin-right: 7px; vertical-align: 1px; }
+.tie:not(.shown) span:first-child { padding-left: 13px; }
+.pop-pick { width: 340px; }
+.pop-pick .pop-h { padding-top: 10px; }
+.opt:disabled { opacity: 0.4; cursor: default; }
+.opt:disabled:hover { background: none; }
+.pop-pick { left: auto; right: 0; }
+
+/* styles/05-footnotes.css */
+/* Footnotes: numbered markers on the chart and in the text, matched by the notes
+   under the chart. A Genie-gradient hairline marks where the notes begin. */
+.fm {
+  display: inline-grid; place-items: center; flex: none;
+  width: 16px; height: 16px; border-radius: 50%;
+  font: 700 10px/1 var(--font); font-variant-numeric: tabular-nums;
+  color: #11171C; background: var(--amber);
+}
+.fm-def { background: var(--link); }
+.fm-thin { background: #B48CF2; }
+sup.fm { width: 15px; height: 15px; font-size: 9.5px; margin: 0 1px 0 3px; vertical-align: 6px; }
+
+.fnote { position: relative; margin-top: 2px; padding: 4px 0; }
+.fnote::before { content: ""; position: absolute; left: 16px; right: 16px; top: 0; height: 1px; background: var(--ai); opacity: 0.5; }
+.fn-row { position: relative; display: flex; align-items: center; gap: 14px; padding: 12px 16px 12px 18px; }
+.fn-row .fm { align-self: flex-start; margin-top: 1px; }
+.fn-row + .fn-row::before { content: ""; position: absolute; left: 48px; right: 16px; top: 0; height: 1px; background: var(--line-soft); }
+.fn-body { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.fn-k { color: var(--text-3); font-size: 12px; font-weight: 500; }
+.fn-t { color: var(--text); line-height: 1.45; }
+.fn-acts { display: flex; gap: 6px; flex: none; }
+.fn-acts .btn.on svg { width: 12px; height: 12px; }
+
+</style>
+</head>
+<body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.5.0/echarts.min.js"></script>
+<script>/* js/00-data.js */
+/* ==========================================================================
+   Data: every number in the demo, with its source.
+   Nothing here is invented. Values marked `pending: true` render as [X].
+   To change a number, change it here; the UI reads only from this file.
+   ========================================================================== */
+window.FN = window.FN || {};
+
+FN.FEATURE = {
+  name: 'Footnotes',              // working name; alternates in design/notes.md
+  tagline: 'Context that travels with the chart',
+  recheckedAt: 'Nov 17, 3:42 PM',
+  recheckedDate: 'Nov 17, 2026'
+};
+
+FN.SOURCES = {
+  T02: 'Genie answer, "Which franchise had the biggest drop week over week?" (trial, Nov 16, 2026; screenshots/problem_02_biggest_drop.png)',
+  T03: 'Genie answer, "Which franchises have positive reviews?" (trial, Nov 16, 2026; screenshots/problem_03_positive_reviews_A.png)',
+  T05: 'Dashboard "Demo: capture" draft (trial, Nov 16, 2026; screenshots/problem_05_dashboard_title_only.png)',
+  T08: 'Genie answer, Baked Bliss daily sales May 6 to 17 (trial, Nov 17, 2026; screenshots/evidence_08_baked_bliss_daily.jpg)',
+  T10: 'Genie answer, franchises grouped by review count (trial, Nov 17, 2026; screenshots/evidence_10_review_count_groups.jpg)',
+  T11: 'Genie answer, total vs unmatched revenue (trial, Nov 17, 2026; screenshots/evidence_11_unmatched_revenue_zero.jpg)',
+  T12: 'Genie answer, earliest and latest transaction (trial, Nov 17, 2026; screenshots/evidence_12_date_range.jpg)',
+  T13: 'Genie answer, total revenue per day (trial, Nov 17, 2026; screenshots/evidence_13_daily_revenue.jpg)',
+  STUDY: 'Your 30-run context study (genie_context_study_log.xlsx; not re-run here)',
+  CALC: 'Arithmetic on the trial numbers above'
+};
+
+FN.DATA = {
+  dataset: {
+    first: '2024-05-01 00:03:28',   // T12 (a Wednesday)
+    last: '2024-05-17 11:48:38',    // T12, T08 (a Friday, before noon)
+    days: 17,                        // T12
+    totalRevenue: 66471,             // T11 (= sum of the three weeks, T13)
+    unmatchedRevenue: 0              // T11: JOIN + IS NOT NULL drop $0
+  },
+
+  // T13: total revenue per day
+  dailyRevenue: [
+    ['2024-05-01', 4128], ['2024-05-02', 4074], ['2024-05-03', 4278], ['2024-05-04', 3822], ['2024-05-05', 3945],
+    ['2024-05-06', 4500], ['2024-05-07', 3894], ['2024-05-08', 3921], ['2024-05-09', 4320], ['2024-05-10', 3729],
+    ['2024-05-11', 3747], ['2024-05-12', 4398],
+    ['2024-05-13', 4044], ['2024-05-14', 4221], ['2024-05-15', 3804], ['2024-05-16', 3714], ['2024-05-17', 1932]
+  ],
+
+  // Weekly revenue: Genie's weekly answer (problem_01) and T13 sums agree
+  weeks: [
+    { start: '2024-04-29', label: 'Apr 29, 2024', short: 'Week of Apr 29', revenue: 20247, days: 5, note: 'Starts Wed, May 1' },
+    { start: '2024-05-06', label: 'May 06, 2024', short: 'Week of May 6', revenue: 28509, days: 7, note: '' },
+    { start: '2024-05-13', label: 'May 13, 2024', short: 'Week of May 13', revenue: 17715, days: 5, note: 'Ends Fri, May 17, 11:48 AM' }
+  ],
+
+  // T02 + T08: Baked Bliss (franchise 3000046)
+  bakedBliss: {
+    id: 3000046,
+    prevWeek: 2718,              // T02; T08 days May 6 to 12 sum to 2,718
+    curWeek: 1116,               // T02; T08 days May 13 to 17 sum to 1,116
+    change: -1602,               // T02
+    daily: [
+      ['2024-05-06', 414], ['2024-05-07', 288], ['2024-05-08', 108], ['2024-05-09', 414], ['2024-05-10', 360],
+      ['2024-05-11', 306], ['2024-05-12', 828],
+      ['2024-05-13', 126], ['2024-05-14', 558], ['2024-05-15', 108], ['2024-05-16', 216], ['2024-05-17', 108]
+    ]
+  },
+
+  // Positive reviews (T03, T10)
+  reviews: {
+    positiveFranchises: 46,        // T03 (and three fresh chats on Nov 16)
+    totalFranchises: 48,           // T10
+    nThree: 28,                    // T10: franchises with 3 reviews
+    nSix: 20,                      // T10: franchises with 6 reviews
+    keywords: ['good', 'great', 'excellent', 'amazing', 'love', 'best', 'delicious'], // T03
+    studyCounts: [3, 26, 46],      // STUDY
+    studyRuns: 30,                 // STUDY
+    // First rows of Genie's result (T03), with review counts from T10
+    rows: [
+      ['3000001', 'Tokyo Treats', 6],
+      ['3000038', 'Dough Delights', 3],
+      ['3000037', 'Kagoshima Confections', 3],
+      ['3000012', 'Crust Couture', 6],
+      ['3000017', 'Crumbly Creations', 6],
+      ['3000031', 'Niigata Nibbles', 3],
+      ['3000011', 'Butter Babies', 6],
+      ['3000015', 'The Bake Shoppe', 6],
+      ['3000041', 'Okayama Ovens', 3],
+      ['3000045', 'Aomori Appetites', 3]
+    ]
+  },
+
+  study: {
+    partialWarned: { value: null, pending: true, of: 30 } // STUDY: [X] of 30 answers warned
+  }
+};
+
+/* ---- Derived numbers (CALC). Computed, never typed. ---- */
+(function derive() {
+  const D = FN.DATA, bb = D.bakedBliss;
+  const sum = (arr, a, b) => arr.slice(a, b).reduce((s, d) => s + d[1], 0);
+
+  bb.lflPrev = sum(bb.daily, 0, 5);                         // Mon to Fri, May 6 to 10
+  bb.lflCur = sum(bb.daily, 7, 12);                         // Mon to Fri, May 13 to 17
+  bb.headlinePct = (bb.curWeek / bb.prevWeek - 1) * 100;    // -58.9
+  bb.lflPct = (bb.lflCur / bb.lflPrev - 1) * 100;           // -29.5
+  bb.perDayPrev = bb.prevWeek / 7;                          // 388.3
+  bb.perDayCur = bb.curWeek / 5;                            // 223.2
+  bb.perDayPct = (bb.perDayCur / bb.perDayPrev - 1) * 100;  // -42.5
+  // Projection: remaining 2 days at the daily average of complete weeks.
+  // The only complete week in the data is May 6 (the week of Apr 29 starts Wed).
+  bb.projAddon = 2 * bb.perDayPrev;                         // 776.6
+  bb.projTotal = bb.curWeek + bb.projAddon;                 // 1,892.6
+  bb.projPct = (bb.projTotal / bb.prevWeek - 1) * 100;      // -30.4
+  bb.projRunRate = bb.curWeek / 5 * 7;                      // 1,562.4
+  bb.projSameDays = bb.curWeek + bb.daily[5][1] + bb.daily[6][1]; // 2,250
+
+  const dr = D.dailyRevenue;
+  D.weeks.forEach(w => { w.perDay = w.revenue / w.days; });
+  D.weeklyLfl = { prev: sum(dr, 5, 10), cur: sum(dr, 12, 17) };   // 20,364 vs 17,715
+  D.weeklyLfl.pct = (D.weeklyLfl.cur / D.weeklyLfl.prev - 1) * 100; // -13.0
+  D.weeklyHeadlinePct = (D.weeks[2].revenue / D.weeks[1].revenue - 1) * 100; // -37.9
+  D.partialWeeks = D.weeks.filter(w => w.days < 7).length;          // 2
+})();
+
+/* Added Nov 17, 2026 (trial, fresh chats; screenshots/evidence_14, evidence_15) */
+FN.DATA.reviews.defs = [
+  { id: 'any', label: 'At least one positive review', sub: 'have at least one positive review', n: 46 },
+  { id: 'most', label: 'More than half of reviews positive', sub: 'have more than half of their reviews positive', n: 20 },
+  { id: 'all', label: 'All reviews positive', sub: 'have only positive reviews', n: 6 }
+];
+FN.DATA.pctDrop = { name: 'Suita Sweets', prev: 558, cur: 171, pct: -69.35 };
+
+/* Comparable full days: Mon–Thu of both weeks (May 17 data stops at 11:48 AM). From dailyRevenue (T13). */
+(function () {
+  const dr = FN.DATA.dailyRevenue, sum = (a, b) => dr.slice(a, b).reduce((s, d) => s + d[1], 0);
+  const W = FN.DATA.weeks;
+  FN.DATA.fullDays = { prev: sum(5, 9), cur: sum(12, 16) };                 // 16,635 vs 15,783
+  FN.DATA.fullDays.pct = (FN.DATA.fullDays.cur / FN.DATA.fullDays.prev - 1) * 100; // −5.1
+  FN.DATA.lastWeek = { prev: W[1].revenue, cur: W[2].revenue, pct: (W[2].revenue / W[1].revenue - 1) * 100 }; // −37.9
+})();
+
+/* Top 5 franchises by positive reviews (trial, Nov 17, 2026; evidence_16–18) */
+FN.DATA.top5 = {
+  // What Genie answered: positive = review contains the literal word "positive"
+  literal: [['Crust Couture', 1], ['The Baking Lab', 1]],
+  // Keyword definition (7 words): name, positive reviews, total reviews
+  keyword: [['Dough Dreamers', 4, 6], ['Fukuoka Fancies', 4, 6], ['Aomori Appetites', 3, 3], ['Crumbly Creations', 3, 6], ['Crumby Delights', 3, 6]],
+  tiedAt: 3,
+  tied: [['Aomori Appetites', 3], ['Crumbly Creations', 6], ['Crumby Delights', 6], ['Crust Couture', 6], ['Doughy Dreams', 6], ['Floured Fantasies', 6],
+    ['Frosted Fantasies', 3], ['Hiroshima Delicacies', 6], ['Kagoshima Confections', 3], ['Kyoto Kravings', 6], ['Nagoya Nibbles', 6], ['Niigata Nibbles', 3],
+    ['Sendai Savories', 3], ['Sugar Rush (3000003)', 6], ['Sugar Rush (3000044)', 3], ['Sweet Temptations', 6], ['The Bake Shoppe', 6]]
+};
+
+/* Top 5 by share of reviews positive (evidence_18): six franchises are at 100%, all 3 of 3 */
+FN.DATA.top5.share = [['Aomori Appetites', 3, 3], ['Frosted Fantasies', 3, 3], ['Kagoshima Confections', 3, 3], ['Niigata Nibbles', 3, 3], ['Sendai Savories', 3, 3]];
+FN.DATA.top5.shareTied = [['Aomori Appetites', 3], ['Frosted Fantasies', 3], ['Kagoshima Confections', 3], ['Niigata Nibbles', 3], ['Sendai Savories', 3], ['Sugar Rush (3000044)', 3]];
+FN.DATA.top5.matchWord = 2;   // franchises with a review containing "positive" (evidence_16)
+FN.DATA.top5.matchKw = 46;    // franchises with at least one keyword review (evidence_14)
+
+/* Positive = ai_analyze_sentiment(review) labels it positive (evidence_19) */
+FN.DATA.top5.ai = {
+  match: 43,
+  count: [['Batter Up', 2, 3], ['Floured Fantasies', 2, 6], ['Kanazawa Konfections', 2, 3], ['Okayama Ovens', 2, 3], ['Sugar High', 2, 3]],
+  countTied: [['Batter Up', 3], ['Floured Fantasies', 6], ['Kanazawa Konfections', 3], ['Okayama Ovens', 3], ['Sugar High', 3], ['Suita Sweets', 3]],
+  // share: five franchises at 2 of 3 (67%); next best is 33%
+  share: [['Batter Up', 2, 3], ['Kanazawa Konfections', 2, 3], ['Okayama Ovens', 2, 3], ['Sugar High', 2, 3], ['Suita Sweets', 2, 3]]
+};
+
+/* One config per definition x ranking, used by the chart and the footnotes */
+FN.DATA.top5.cfg = function (def, rank) {
+  const T = FN.DATA.top5;
+  if (def === 'word') return { rows: T.literal.map(r => [r[0], r[1], null]), tieFrom: -1 };
+  if (def === 'ai') return rank === 'share'
+    ? { rows: T.ai.share, tieFrom: -1, share: true, small: true }
+    : { rows: T.ai.count, tieFrom: 0, tied: T.ai.countTied, tiedLabel: '2 positive reviews', rankAt: 1, shown: 5 };
+  return rank === 'share'
+    ? { rows: T.share, tieFrom: 0, share: true, tied: T.shareTied, tiedLabel: '100% positive', rankAt: 1, shown: 5 }
+    : { rows: T.keyword, tieFrom: 2, tied: T.tied, tiedLabel: '3 positive reviews', rankAt: 3, shown: 3 };
+};
+
+</script>
+<script>/* js/01-util.js */
+/* ==========================================================================
+   Utilities: formatting, DOM helpers, timing
+   ========================================================================== */
+FN.u = (function () {
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const n0 = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
+
+  /** $2,718 */
+  const usd = v => (v < 0 ? '−$' : '$') + n0.format(Math.abs(Math.round(v)));
+  /** 2,718 */
+  const int = v => (v < 0 ? '−' : '') + n0.format(Math.abs(Math.round(v)));
+  /** −59% (true minus sign) */
+  const pct = (v, signed = true) => {
+    const r = Math.round(v);
+    return (r < 0 ? '−' : (signed && r > 0 ? '+' : '')) + Math.abs(r) + '%';
+  };
+  /** $28.5k for axes */
+  const usdK = v => v >= 1000 ? '$' + (v / 1000).toFixed(v % 1000 === 0 ? 0 : 1) + 'k' : '$' + v;
+  /** [X] placeholder for pending values */
+  const pending = '<span class="pend" title="Pending: not verified yet">[X]</span>';
+
+  const $ = (sel, root = document) => root.querySelector(sel);
+  const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+
+  const reducedMotion = () => window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  return { esc, usd, int, pct, usdK, pending, $, $$, reducedMotion };
+})();
+
+</script>
+<script>/* js/02-icons.js */
+/* ==========================================================================
+   Icons: 16 px grid, 1.5 px stroke, round caps (matches Databricks' outline set
+   in weight and size; drawn from scratch, not copied).
+   ========================================================================== */
+FN.icon = (function () {
+  const P = {
+    menu: '<rect x="2.5" y="3" width="11" height="10" rx="1.5"/><path d="M6 3v10"/>',
+    search: '<circle cx="7" cy="7" r="4.25"/><path d="m10.25 10.25 3 3"/>',
+    plus: '<path d="M8 3v10M3 8h10"/>',
+    folder: '<path d="M2.5 4.5a1 1 0 0 1 1-1h3l1.5 1.5h4.5a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1z"/>',
+    clock: '<circle cx="8" cy="8" r="5.5"/><path d="M8 5v3l2 1.5"/>',
+    catalog: '<path d="M3 4.5C3 3.7 5.2 3 8 3s5 .7 5 1.5S10.8 6 8 6 3 5.3 3 4.5Z"/><path d="M3 4.5v7C3 12.3 5.2 13 8 13s5-.7 5-1.5v-7M3 8c0 .8 2.2 1.5 5 1.5S13 8.8 13 8"/>',
+    jobs: '<circle cx="4.5" cy="4.5" r="1.75"/><circle cx="11.5" cy="11.5" r="1.75"/><path d="M6.25 4.5h3a2 2 0 0 1 2 2v3.25"/>',
+    compute: '<path d="M4 10.5a3 3 0 1 1 .6-5.95A4 4 0 0 1 12.4 6 2.5 2.5 0 0 1 12 11H4.5"/>',
+    dashboard: '<rect x="2.5" y="2.5" width="11" height="11" rx="1.5"/><path d="M2.5 7h11M7 7v6.5"/>',
+    genie: '<path d="M3 11.5h10M5 11.5c0-2.5 1.3-4 3-4s3 1.5 3 4M8 7.5V5.5M6.5 4.5h3"/>',
+    bell: '<path d="M4.5 10.5V7a3.5 3.5 0 0 1 7 0v3.5l1 1.5h-9z"/><path d="M6.75 13.5h2.5"/>',
+    sql: '<rect x="2.5" y="3" width="11" height="10" rx="1.5"/><path d="m5 7 1.5 1.25L5 9.5M8 9.5h3"/>',
+    query: '<path d="M4.5 2.5h5l2.5 2.5v8.5h-7.5z"/><path d="M6.5 8h3M6.5 10.5h3"/>',
+    chat: '<path d="M3 4.5a1.5 1.5 0 0 1 1.5-1.5h7A1.5 1.5 0 0 1 13 4.5v5A1.5 1.5 0 0 1 11.5 11H7l-3 2.5V11h0a1 1 0 0 1-1-1z"/>',
+    eye: '<path d="M1.75 8S4 3.75 8 3.75 14.25 8 14.25 8 12 12.25 8 12.25 1.75 8 1.75 8Z"/><circle cx="8" cy="8" r="2"/>',
+    bars: '<path d="M3 13V8M6.5 13V4M10 13v-3M13.5 13V6"/>',
+    edit: '<path d="M10.5 3 13 5.5 6.5 12H4v-2.5z"/>',
+    history: '<path d="M3 8a5 5 0 1 0 1.5-3.5M3 3v2.5h2.5"/><path d="M8 5.5V8l1.75 1.25"/>',
+    gear: '<circle cx="8" cy="8" r="2"/><path d="M8 2v1.5M8 12.5V14M2 8h1.5M12.5 8H14M3.75 3.75l1.05 1.05M11.2 11.2l1.05 1.05M3.75 12.25l1.05-1.05M11.2 4.8l1.05-1.05"/>',
+    lock: '<rect x="3.5" y="7" width="9" height="6.5" rx="1.25"/><path d="M5.5 7V5.25a2.5 2.5 0 0 1 5 0V7"/>',
+    share: '<circle cx="5" cy="8" r="1.75"/><circle cx="11.5" cy="4.5" r="1.75"/><circle cx="11.5" cy="11.5" r="1.75"/><path d="m6.5 7.2 3.5-1.9M6.5 8.8l3.5 1.9"/>',
+    kebab: '<circle cx="8" cy="3.5" r=".6"/><circle cx="8" cy="8" r=".6"/><circle cx="8" cy="12.5" r=".6"/>',
+    shield: '<path d="M8 2.5 3.5 4v3.5c0 3 2 4.75 4.5 6 2.5-1.25 4.5-3 4.5-6V4z"/>',
+    chevR: '<path d="m6 3.5 4.5 4.5L6 12.5"/>',
+    chevD: '<path d="m3.5 6 4.5 4.5L12.5 6"/>',
+    chevU: '<path d="m3.5 10 4.5-4.5 4.5 4.5"/>',
+    table: '<rect x="2.5" y="3" width="11" height="10" rx="1"/><path d="M2.5 6.5h11M6 6.5V13"/>',
+    download: '<path d="M8 2.5v7.5M4.75 7 8 10.25 11.25 7M3 13.5h10"/>',
+    grid: '<rect x="2.5" y="2.5" width="11" height="11" rx="1"/><path d="M8 2.5v11M2.5 8h11"/>',
+    up: '<path d="M5 13V7H2.5L8 2.5 13.5 7H11v6z"/>',
+    thumbUp: '<path d="M5 7v6.5H3V7zM5 7l2.5-4.5c1 0 1.75.75 1.5 1.75L8.5 6.5h3.75a1 1 0 0 1 1 1.2l-.9 4.8a1 1 0 0 1-1 .8H5"/>',
+    thumbDown: '<path d="M5 9V2.5H3V9zM5 9l2.5 4.5c1 0 1.75-.75 1.5-1.75L8.5 9.5h3.75a1 1 0 0 0 1-1.2l-.9-4.8a1 1 0 0 0-1-.8H5"/>',
+    comment: '<path d="M8 13.5c3 0 5.5-2.25 5.5-5S11 3.5 8 3.5 2.5 5.75 2.5 8.5c0 1.1.4 2.1 1.05 2.9L3 13.5l2.3-.65c.8.4 1.7.65 2.7.65Z"/><path d="M8 6.5c.8 0 1.25.45 1.25 1 0 .75-1.25.9-1.25 1.75M8 10.75v.01"/>',
+    sparkle: '<path d="M8 2.5c.4 2.6 1.9 4.1 4.5 4.5-2.6.4-4.1 1.9-4.5 4.5-.4-2.6-1.9-4.1-4.5-4.5 2.6-.4 4.1-1.9 4.5-4.5Z"/><path d="M12.5 11c.15.9.6 1.35 1.5 1.5-.9.15-1.35.6-1.5 1.5-.15-.9-.6-1.35-1.5-1.5.9-.15 1.35-.6 1.5-1.5Z"/>',
+    clip: '<path d="m12.5 7.5-4.75 4.75a2.6 2.6 0 0 1-3.7-3.7L9 3.6a1.75 1.75 0 0 1 2.5 2.5L6.6 11"/>',
+    arrowR: '<path d="M3 8h10M9 4l4 4-4 4"/>',
+    arrowL: '<path d="M13 8H3M7 4 3 8l4 4"/>',
+    reply: '<path d="M3 4v3.5a2 2 0 0 0 2 2h8M10 6.5l3 3-3 3"/>',
+    x: '<path d="m4 4 8 8M12 4l-8 8"/>',
+    check: '<path d="m3.5 8.25 3 3 6-6.5"/>',
+    checkCircle: '<circle cx="8" cy="8" r="5.75"/><path d="m5.5 8.1 1.75 1.75L10.75 6.4"/>',
+    refresh: '<path d="M13 8a5 5 0 0 1-8.9 3.1M3 8a5 5 0 0 1 8.9-3.1"/><path d="M12 2.5v2.75H9.25M4 13.5v-2.75h2.75"/>',
+    calendar: '<rect x="2.5" y="3.5" width="11" height="10" rx="1.25"/><path d="M2.5 6.5h11M5.5 2v3M10.5 2v3"/>',
+    star: '<path d="m8 2.75 1.6 3.3 3.65.5-2.65 2.55.65 3.6L8 11l-3.25 1.7.65-3.6L2.75 6.55l3.65-.5z"/>',
+    bookmark: '<path d="M4.5 2.5h7v11L8 11l-3.5 2.5z"/>',
+    filter: '<path d="M2.5 3.5h11L9.25 8.5v4L6.75 11.5v-3z"/>',
+    play: '<path d="M5 3.5v9l7.5-4.5z" fill="currentColor"/>',
+    pause: '<path d="M5.5 3.5v9M10.5 3.5v9"/>',
+    expand: '<path d="M9.5 2.5h4v4M6.5 13.5h-4v-4M13.5 2.5 9 7M2.5 13.5 7 9"/>',
+    dayView: '<rect x="2.5" y="3.5" width="11" height="10" rx="1.25"/><path d="M2.5 6.5h11M6 9.25h1M9 9.25h1M6 11.5h1"/>',
+    compare: '<path d="M4 13V6M8 13V3M12 13V6"/><path d="M2.5 13.5h11"/>',
+    estimate: '<path d="M2.5 12.5 6 9l2.5 2L13.5 5" stroke-dasharray="2 2"/>',
+    sortN: '<path d="M4 3v10M2 11l2 2 2-2M8.5 4.5h5M8.5 8h3.5M8.5 11.5h2"/>',
+    hide: '<path d="M2 2l12 12M6.5 6.6A2 2 0 0 0 9.4 9.5M4.3 4.4C2.8 5.5 1.75 8 1.75 8S4 12.25 8 12.25c1.3 0 2.4-.45 3.3-1.05M7 3.85c.3-.07.65-.1 1-.1 4 0 6.25 4.25 6.25 4.25s-.6 1.15-1.7 2.3"/>',
+    code: '<path d="m5.5 4.5-3 3.5 3 3.5M10.5 4.5l3 3.5-3 3.5"/>',
+    swap: '<path d="M3 5.5h9.5M10 3l2.5 2.5L10 8M13 10.5H3.5M6 8l-2.5 2.5L6 13"/>',
+    users: '<circle cx="6" cy="5.5" r="2.25"/><path d="M2 13c.4-2.2 2-3.5 4-3.5s3.6 1.3 4 3.5"/><circle cx="11.25" cy="6" r="1.75"/><path d="M11 9.5c1.6 0 2.8 1.1 3.1 2.9"/>',
+    apps: '<circle cx="4" cy="4" r=".9"/><circle cx="8" cy="4" r=".9"/><circle cx="12" cy="4" r=".9"/><circle cx="4" cy="8" r=".9"/><circle cx="8" cy="8" r=".9"/><circle cx="12" cy="8" r=".9"/><circle cx="4" cy="12" r=".9"/><circle cx="8" cy="12" r=".9"/><circle cx="12" cy="12" r=".9"/>',
+    log: '<path d="M4.5 2.5h7v11h-7z"/><path d="M6.5 5.5h3M6.5 8h3M6.5 10.5h2"/>'
+  };
+  function icon(name, cls = '') {
+    const d = P[name] || '';
+    return `<svg class="${cls}" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${d}</svg>`;
+  }
+  return icon;
+})();
+
+</script>
+<script>/* js/03-charts.js */
+/* Charts: ECharts, quiet styling.
+   Footnoted mode: partial buckets are hatched and carry a numbered marker that
+   matches the footnote below the chart. Estimates are a dashed outline.
+   Bare mode: the chart as Genie draws it today. */
+FN.charts = (function () {
+  const u = FN.u, D = FN.DATA, bb = D.bakedBliss;
+  const FONT = '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Arial, sans-serif';
+  const C = { s: '#077A9D', hi: '#1595BD', t: '#E8ECF0', t2: '#A3AEB8', t3: '#74828E', grid: '#1F272E', axis: '#273038', amber: '#F2B33D', est: '#92A4B3', bg: '#182026' };
+  const inst = new Map();
+  let instant = false;
+
+  function hatch(stroke, fill, size = 7) {
+    const c = document.createElement('canvas'), d = 2;
+    c.width = c.height = size * d;
+    const g = c.getContext('2d'); g.scale(d, d);
+    if (fill) { g.fillStyle = fill; g.fillRect(0, 0, size, size); }
+    g.strokeStyle = stroke; g.lineWidth = 1.2;
+    g.beginPath(); g.moveTo(0, size); g.lineTo(size, 0); g.moveTo(-size / 2, size / 2); g.lineTo(size / 2, -size / 2); g.moveTo(size / 2, size * 1.5); g.lineTo(size * 1.5, size / 2); g.stroke();
+    return { image: c, repeat: 'repeat', imageWidth: size, imageHeight: size };
+  }
+  const rich = {
+    v: { color: C.t, fontSize: 13, fontWeight: 600, fontFamily: FONT, lineHeight: 20 },
+    p: { color: C.amber, fontSize: 11.5, fontWeight: 500, fontFamily: FONT, lineHeight: 16 },
+    e: { color: C.est, fontSize: 11.5, fontFamily: FONT, lineHeight: 16 },
+    gap: { width: 6 },
+    m: { backgroundColor: C.amber, color: '#11171C', borderRadius: 8, width: 15, height: 15, lineHeight: 15, align: 'center', fontSize: 10, fontWeight: 700, fontFamily: FONT }
+  };
+  const base = o => Object.assign({
+    animation: !instant, animationDuration: 500, animationDurationUpdate: 560, animationEasing: 'cubicOut', animationEasingUpdate: 'cubicOut',
+    textStyle: { fontFamily: FONT }, tooltip: { show: false }
+  }, o);
+  const xCat = data => ({ type: 'category', data, axisLine: { lineStyle: { color: C.axis } }, axisTick: { show: false }, axisLabel: { color: C.t2, fontSize: 12, margin: 12, fontFamily: FONT } });
+  const yVal = (max, fmt) => ({ type: 'value', max, splitNumber: 3, splitLine: { lineStyle: { color: C.grid } }, axisLabel: { color: C.t3, fontSize: 11, fontFamily: FONT, formatter: fmt } });
+
+  /* Baked Bliss. view: weekly | lfl | proj. fn: footnotes on? */
+  function bar(view = 'weekly', fn = true) {
+    const solid = { color: C.s, borderRadius: [4, 4, 0, 0] };
+    const part = { color: hatch('rgba(21,149,189,0.85)', 'rgba(7,122,157,0.16)'), borderColor: C.hi, borderWidth: 1.2, borderRadius: [4, 4, 0, 0] };
+    let cats = ['Week of May 6', 'Week of May 13'], a, e = [0, 0], aria;
+    const v = n => () => `{v|${u.usd(n)}}`;
+    if (fn && view === 'lfl') {
+      cats = ['May 6–10', 'May 13–17'];
+      a = [{ value: bb.lflPrev, itemStyle: solid, label: { formatter: v(bb.lflPrev) } },
+        { value: bb.lflCur, itemStyle: solid, label: { formatter: () => `{v|${u.usd(bb.lflCur)} }{gap| }{m|1}` } }];
+      aria = `First five days of each week: ${u.usd(bb.lflPrev)} for May 6 to 10, ${u.usd(bb.lflCur)} for May 13 to 17.`;
+    } else if (fn && view === 'proj') {
+      a = [{ value: bb.prevWeek, itemStyle: solid, label: { formatter: v(bb.prevWeek) } },
+        { value: bb.curWeek, itemStyle: { color: C.s, borderRadius: 0 }, label: { show: false } }];
+      e = [{ value: 0, itemStyle: { color: 'transparent' }, label: { show: false } },
+        { value: Math.round(bb.projAddon), itemStyle: { color: 'rgba(146,164,179,0.06)', borderColor: C.est, borderType: [4, 3], borderWidth: 1.3, borderRadius: [4, 4, 0, 0] },
+          label: { show: true, position: 'top', distance: 8, formatter: () => `{v|${u.usd(bb.projTotal)} }{gap| }{m|1}\n{e|Includes estimate}` } }];
+      aria = `Week of May 13: ${u.usd(bb.curWeek)} actual plus an estimated ${u.usd(bb.projAddon)} for May 18 and 19.`;
+    } else if (fn) {
+      a = [{ value: bb.prevWeek, itemStyle: solid, label: { formatter: v(bb.prevWeek) } },
+        { value: bb.curWeek, itemStyle: part, label: { formatter: () => `{v|${u.usd(bb.curWeek)} }{gap| }{m|1}\n{p|5 of 7 days}` } }];
+      aria = `Baked Bliss weekly sales: ${u.usd(bb.prevWeek)} then ${u.usd(bb.curWeek)}. Footnote 1: the second week covers 5 of 7 days.`;
+    } else {
+      a = [{ value: bb.prevWeek, itemStyle: solid, label: { formatter: v(bb.prevWeek) } },
+        { value: bb.curWeek, itemStyle: solid, label: { formatter: v(bb.curWeek) } }];
+      aria = `Baked Bliss weekly sales: ${u.usd(bb.prevWeek)} then ${u.usd(bb.curWeek)}.`;
+    }
+    const zero = x => (typeof x === 'number' ? { value: x, itemStyle: { color: 'transparent' }, label: { show: false } } : x);
+    return {
+      aria,
+      option: base({
+        grid: { left: 46, right: 16, top: 48, bottom: 30 },
+        xAxis: xCat(cats),
+        yAxis: yVal(3000, x => x ? '$' + x / 1000 + 'k' : '$0'),
+        series: [
+          { id: 'a', type: 'bar', stack: 's', barMaxWidth: 88, barCategoryGap: '48%', data: a, label: { show: true, position: 'top', distance: 8, rich }, emphasis: { disabled: true }, silent: true },
+          { id: 'e', type: 'bar', stack: 's', barMaxWidth: 88, data: e.map(zero), label: { rich }, emphasis: { disabled: true }, silent: true }
+        ]
+      })
+    };
+  }
+
+  /* Weekly revenue, company level. view: weekly | full (Mon–Thu of both weeks). fn: footnotes on? */
+  function weeks(view = 'weekly', fn = true, tips = false) {
+    const W = D.weeks, F = D.fullDays;
+    const solid = { color: C.s, borderRadius: [4, 4, 0, 0] };
+    const part = { color: hatch('rgba(21,149,189,0.85)', 'rgba(7,122,157,0.16)'), borderColor: C.hi, borderWidth: 1.2, borderRadius: [4, 4, 0, 0] };
+    let cats, data, aria;
+    if (fn && view === 'perday') {
+      cats = W.map(w => w.short);
+      data = W.map((w, k) => {
+        const partial = w.days < 7, last = k === W.length - 1;
+        return { value: Math.round(w.perDay), itemStyle: partial ? part : solid,
+          label: { formatter: () => `{v|${u.usd(w.perDay)}/day${last ? '\u2009}{gap| }{m|1}' : '}'}${partial ? '\n{p|5 of 7 days}' : ''}` } };
+      });
+      aria = `Revenue per day of data: ${W.map(w => u.usd(w.perDay)).join(', ')}.`;
+    } else if (fn && view === 'full') {
+      cats = ['Mon–Thu, May 6–9', 'Mon–Thu, May 13–16'];
+      data = [{ value: F.prev, itemStyle: solid, label: { formatter: () => `{v|${u.usd(F.prev)}}` } },
+        { value: F.cur, itemStyle: solid, label: { formatter: () => `{v|${u.usd(F.cur)}\u2009}{gap| }{m|1}` } }];
+      aria = `Full days only, Monday to Thursday: ${u.usd(F.prev)} then ${u.usd(F.cur)}, down 5 percent.`;
+    } else {
+      cats = W.map(w => w.short);
+      data = W.map((w, k) => {
+        const partial = fn && w.days < 7, last = k === W.length - 1;
+        return { value: w.revenue, itemStyle: partial ? part : solid,
+          label: { formatter: () => partial ? `{v|${u.usd(w.revenue)}${last ? '\u2009}{gap| }{m|1}' : '}'}\n{p|5 of 7 days}` : `{v|${u.usd(w.revenue)}}` } };
+      });
+      aria = `Weekly revenue: ${W.map(w => u.usd(w.revenue)).join(', ')}.${fn ? ' Footnote 1: the first and last weeks are partial.' : ''}`;
+    }
+    return {
+      aria,
+      option: base({
+        grid: { left: 50, right: 16, top: 50, bottom: 30 },
+        xAxis: xCat(cats),
+        yAxis: view === 'perday' && fn ? yVal(6000, x => x ? '$' + (x / 1000).toFixed(0) + 'k' : '$0') : yVal(30000, x => x ? '$' + x / 1000 + 'k' : '$0'),
+        tooltip: tips ? {
+          show: true, trigger: 'axis', axisPointer: { type: 'shadow', shadowStyle: { color: 'rgba(255,255,255,0.03)' } },
+          backgroundColor: '#1E272E', borderColor: '#33404A', borderWidth: 1, padding: [10, 12],
+          textStyle: { color: C.t, fontSize: 12.5, fontFamily: FONT },
+          extraCssText: 'border-radius:8px;box-shadow:0 12px 28px -10px rgba(0,0,0,.6);max-width:260px;white-space:normal;',
+          formatter: ps => {
+            const w = view === 'full' ? null : W[ps[0].dataIndex];
+            let h = `<div style="color:${C.t2};margin-bottom:4px">${ps[0].name}</div><div style="font-weight:600">${u.usd(ps[0].value)}${view === 'perday' ? ' per day' : ''}</div>`;
+            if (fn && w && w.days < 7) h += `<div style="margin-top:8px;padding-top:8px;border-top:1px solid #33404A;display:flex;gap:8px;align-items:flex-start"><span style="flex:none;width:15px;height:15px;border-radius:50%;background:${C.amber};color:#11171C;font-size:10px;font-weight:700;display:grid;place-items:center">1</span><span style="color:${C.t2}">${w.days} of 7 days of data. ${w.note}.</span></div>`;
+            return h;
+          }
+        } : { show: false },
+        series: [{ id: 'w', type: 'bar', barMaxWidth: 84, barCategoryGap: view === 'full' && fn ? '52%' : '40%', data, label: { show: true, position: 'top', distance: 8, rich }, emphasis: { disabled: true }, silent: true }]
+      })
+    };
+  }
+
+  /* Top 5 franchises by positive reviews.
+     def: word (Genie's literal "positive") | ai (ai_analyze_sentiment) | kw (7 keywords). rank: count | share. */
+  function top5(def = 'word', rank = 'count', fn = true) {
+    const d = fn ? def : 'word', c = D.top5.cfg(d, rank), rows = c.rows, names = rows.map(r => r[0]);
+    const pctOf = r => Math.round(r[1] / r[2] * 100);
+    const data = rows.map((r, k) => ({
+      value: c.share ? pctOf(r) : r[1],
+      itemStyle: { color: C.s, borderRadius: [0, 3, 3, 0] },
+      label: { formatter: () => {
+        const m = k === c.tieFrom ? '{gap| }{m|2}' : '';
+        if (d === 'word') return `{v|${r[1]}}`;
+        return c.share ? `{v|${pctOf(r)}%}${m}{e|  ${r[1]} of ${r[2]} reviews}` : `{v|${r[1]}}${m}{e|  of ${r[2]} reviews}`;
+      } }
+    }));
+    const xMax = c.share ? 125 : d === 'kw' ? 5 : 3;
+    return {
+      aria: `Top franchises by ${c.share ? 'share of positive reviews' : 'positive reviews'}: ${rows.map(r => `${r[0]} ${r[1]}${r[2] ? ' of ' + r[2] : ''}`).join(', ')}.${c.tied ? ` Footnote 2: ${c.tied.length} franchises tie; ${c.tied.length - c.shown} not shown.` : ''}`,
+      option: base({
+        grid: { left: 172, right: 24, top: 8, bottom: 24 },
+        xAxis: { type: 'value', max: xMax, interval: c.share ? 25 : 1, splitLine: { lineStyle: { color: C.grid } },
+          axisLabel: { color: C.t3, fontSize: 11, fontFamily: FONT, formatter: v => c.share ? (v <= 100 ? v + '%' : '') : v } },
+        yAxis: { type: 'category', data: names, inverse: true, axisLine: { lineStyle: { color: C.axis } }, axisTick: { show: false }, axisLabel: { color: C.t, fontSize: 12.5, fontFamily: FONT, margin: 14 } },
+        series: [{ id: 't', type: 'bar', barMaxWidth: 22, barCategoryGap: '42%', data, silent: true, emphasis: { disabled: true }, label: { show: true, position: 'right', distance: 8, rich } }]
+      })
+    };
+  }
+
+  /* Weekly revenue. view: totals | perday. fn: footnotes on? */
+  function line(view = 'totals', fn = true) {
+    const pd = fn && view === 'perday', W = D.weeks;
+    const max = pd ? 5000 : 30000, min = pd ? 3000 : 15000;
+    const series = [];
+    if (fn) series.push({
+      id: 'band', type: 'bar', silent: true, barWidth: '100%', z: 1, animation: false,
+      data: W.map(w => w.days < 7 ? { value: max, itemStyle: { color: hatch('rgba(242,179,61,0.10)', 'rgba(242,179,61,0.02)', 9) }, label: { show: true, position: 'insideBottom', distance: 12, formatter: '{m|1}{gap| }{p|5 of 7 days}' } } : { value: 0, itemStyle: { color: 'transparent' }, label: { show: false } }),
+      label: { rich }
+    });
+    series.push({
+      id: 'l', type: 'line', z: 3, symbolSize: 7, lineStyle: { color: C.hi, width: 2 },
+      data: W.map(w => ({ value: Math.round(pd ? w.perDay : w.revenue), symbol: 'circle', itemStyle: { color: fn && w.days < 7 ? C.bg : C.hi, borderColor: C.hi, borderWidth: 2 } })),
+      label: { show: false }
+    });
+    const tip = {
+      show: true, trigger: 'axis', axisPointer: { type: 'line', lineStyle: { color: C.axis } },
+      backgroundColor: '#1E272E', borderColor: '#33404A', borderWidth: 1, padding: [10, 12],
+      textStyle: { color: C.t, fontSize: 12.5, fontFamily: FONT },
+      extraCssText: 'border-radius:8px;box-shadow:0 12px 28px -10px rgba(0,0,0,.6);max-width:260px;white-space:normal;',
+      formatter: ps => {
+        const p = ps.find(x => x.seriesId === 'l'), w = W[p.dataIndex];
+        let h = `<div style="color:${C.t2};margin-bottom:4px">${w.short}</div><div style="font-weight:600">${u.usd(p.value)}${pd ? ' per day' : ''}</div>`;
+        if (fn && w.days < 7) h += `<div style="margin-top:8px;padding-top:8px;border-top:1px solid #33404A;display:flex;gap:8px;align-items:flex-start"><span style="flex:none;width:15px;height:15px;border-radius:50%;background:${C.amber};color:#11171C;font-size:10px;font-weight:700;display:grid;place-items:center">1</span><span style="color:${C.t2}">${w.days} of 7 days of data. ${w.note}.</span></div>`;
+        return h;
+      }
+    };
+    return {
+      aria: pd ? `Revenue per day of data: ${W.map(w => u.usd(w.perDay)).join(', ')}.` : `Weekly revenue: ${W.map(w => u.usd(w.revenue)).join(', ')}.${fn ? ' Footnote 1: the first and last weeks each cover 5 of 7 days.' : ''}`,
+      option: base({
+        tooltip: tip,
+        grid: { left: 62, right: 22, top: 22, bottom: 48 },
+        xAxis: Object.assign(xCat(W.map(w => w.label)), { boundaryGap: true, name: 'Week', nameLocation: 'middle', nameGap: 32, nameTextStyle: { color: C.t, fontWeight: 600, fontSize: 12, fontFamily: FONT } }),
+        yAxis: Object.assign(yVal(max, x => '$' + (x / 1000).toFixed(pd ? 1 : 0) + 'k'), { min, splitNumber: 3, name: pd ? 'Revenue per day' : 'Revenue', nameLocation: 'middle', nameGap: 46, nameRotate: 90, nameTextStyle: { color: C.t, fontWeight: 600, fontSize: 12, fontFamily: FONT } }),
+        series
+      })
+    };
+  }
+
+  function set(el, spec) {
+    if (!el) return;
+    el.setAttribute('role', 'img'); el.setAttribute('aria-label', spec.aria);
+    if (!window.echarts) { el.innerHTML = `<div class="muted" style="padding:16px">${u.esc(spec.aria)}</div>`; return; }
+    let i = inst.get(el);
+    spec.option.animation = !instant;
+    if (!i || i.isDisposed()) { i = echarts.init(el, null, { devicePixelRatio: Math.max(2, window.devicePixelRatio || 1) }); inst.set(el, i); i.setOption(spec.option); }
+    else i.setOption(spec.option, { replaceMerge: ['series', 'xAxis'] });
+  }
+  function prune() { inst.forEach((i, el) => { if (!document.body.contains(el)) { i.dispose(); inst.delete(el); } }); }
+  function resize() { inst.forEach(i => i.resize()); }
+  return { top5, weeks, bar, line, set, prune, resize, setInstant: v => { instant = v; } };
+})();
+
+</script>
+<script>/* js/04-ui.js */
+/* UI: workspace chrome, scenes, messages, footnotes. Every function returns HTML.
+   `fn` = footnotes on (the feature). Without it, screens match today's product. */
+FN.ui = (function () {
+  const u = FN.u, i = FN.icon, D = FN.DATA, R = D.reviews, F = D.fullDays, LW = D.lastWeek;
+  const AGENT = 'Bakehouse Sales Starter Space';
+  const DASH = 'Weekly business review';
+  let gid = 0;
+  const spark = () => { const id = 'sg' + (gid++); return `<svg viewBox="0 0 16 16" aria-hidden="true"><defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4299E0"/><stop offset=".55" stop-color="#CA42E0"/><stop offset="1" stop-color="#FF5F46"/></linearGradient></defs><path fill="url(#${id})" d="M8 1.5c.5 3.3 2.3 5.1 5.6 5.6-3.3.5-5.1 2.3-5.6 5.6-.5-3.3-2.3-5.1-5.6-5.6 3.3-.5 5.1-2.3 5.6-5.6Z"/></svg>`; };
+  const fm = (n, t, tag = 'span') => `<${tag} class="fm fm-${t}" aria-label="Footnote ${n}">${n}</${tag}>`;
+  const pct = v => `${Math.abs(Math.round(v))}%`;
+
+  /* ---------- Chrome ---------- */
+  function shell(beats, chapters) {
+    const nav = (ic, t, key) => `<div class="nav" data-nav="${key || ''}">${i(ic)}${t}</div>`;
+    const dots = chapters.map(c => `<div class="tl-ch" data-ch="${c.id}"><div class="tl-dots">${c.beats.map(b => `<button type="button" class="tl-dot" data-go="${b}" aria-label="Go to step ${b + 1}"></button>`).join('')}</div><span class="tl-l">${c.label}</span></div>`).join('');
+    return `<div class="app">
+      <header class="top">
+        <div class="brand"><span class="brand-mark">${spark()}</span>databricks</div>
+        <div class="search">${i('search')}Search data, notebooks, recents, and more…</div>
+        <div class="top-r"><span class="avatar" aria-hidden="true">M</span></div>
+      </header>
+      <nav class="side" aria-label="Workspace">
+        ${nav('folder', 'Workspace')}${nav('clock', 'Recents')}${nav('catalog', 'Catalog')}
+        <div class="nav-h">SQL</div>
+        ${nav('sql', 'SQL Editor')}${nav('dashboard', 'Dashboards', 'dash')}${nav('genie', 'Genie', 'genie')}${nav('compute', 'SQL Warehouses')}
+      </nav>
+      <main class="stage" id="stage"></main>
+    </div>
+    <div class="tl" role="group" aria-label="Walkthrough">
+      <button type="button" class="tl-btn" data-walk="prev" aria-label="Back">${i('arrowL')}</button>
+      ${dots}
+      <button type="button" class="tl-btn tl-next" data-walk="next" aria-label="Next">${i('arrowR')}</button>
+    </div>
+    <div class="tl-ba" data-ba hidden role="group" aria-label="Compare with today"><button type="button" data-cmp="before">Before</button><button type="button" data-cmp="after">After</button></div>`;
+  }
+
+  /* ---------- Genie chat ---------- */
+  const chat = () => `<section class="scene" data-scene="chat">
+      <header class="g-head">
+        <div class="g-title"><span>${AGENT}</span><span class="tag">Reviewable</span></div>
+        <div class="tabs"><span class="tab on">Chat</span><span class="tab">Monitor</span><span class="tab">Benchmark</span></div>
+        <div class="g-actions"><span class="btn">Configure</span><span class="btn primary">Share</span></div>
+      </header>
+      <div class="g-body" data-body></div>
+    </section>`;
+  function home() {
+    const qs = [['rev', 'How did revenue change last week?'], ['', 'Which product sold the most units?'], ['', 'Which franchise had the biggest drop week over week?'], ['', 'How many franchises have positive reviews?']];
+    return `<div class="home"><div class="home-in">
+      <h1>${AGENT}</h1>
+      <p>Ask about the bakery's sales, franchises and reviews.</p>
+      <div class="input" data-input><span class="ph">Ask your question…</span>${i('up')}</div>
+      <div class="q-list">${qs.map(q => `<button type="button" class="q" ${q[0] ? `data-q="${q[0]}"` : ''}>${q[1]}</button>`).join('')}</div>
+    </div></div>`;
+  }
+  const thread = () => `<div class="thread" data-thread><div class="col" data-col></div></div>
+    <div class="dock"><div class="input"><span class="ph">Ask your question…</span>${i('up')}</div><div class="disc">Always review the accuracy of responses.</div></div>`;
+  const who = (tp = true) => `<div class="who">${spark()}Genie${tp ? '<span class="tp">Thought process ›</span>' : ''}</div>`;
+  const typing = () => `<div class="msg-genie">${who(false)}<div class="dots"><i></i><i></i><i></i></div></div>`;
+
+  function msg(m) {
+    if (m.type === 'user') return `<div class="msg-user">${u.esc(m.text)}</div>`;
+    if (m.type === 'typing') return typing();
+    if (m.type === 'rev') return `<div class="msg-genie">${who()}
+      <div class="say" data-slot="rv-say"></div>
+      <div class="card">
+        <div class="card-h"><span class="card-t">Weekly revenue</span><span class="sp"></span><span class="lnk">Show code</span><button type="button" class="btn sm" data-save>${i('dashboard')}Add to dashboard</button></div>
+        <div class="card-s" data-slot="rv-sub"></div>
+        <div class="chart" id="c-rv" style="height:252px"></div>
+        <div data-slot="rv-fn"></div>
+      </div></div>`;
+    if (m.type === 'top5') return `<div class="msg-genie">${who()}
+      <div class="say" data-slot="t-say"></div>
+      <div class="card">
+        <div class="card-h"><span class="card-t" data-slot="t-title"></span><span class="sp"></span><span class="lnk">Show code</span><button type="button" class="btn sm" data-save-top>${i('dashboard')}Add to dashboard</button></div>
+        <div class="card-s" data-slot="t-sub"></div>
+        <div class="chart" id="c-top" style="height:236px"></div>
+        <div data-slot="t-fn"></div>
+      </div></div>`;
+    if (m.type === 'reviews') return `<div class="msg-genie">${who()}
+      <div class="say" data-slot="rev-say"></div>
+      <div class="card rev">
+        <div class="rev-main"><div class="rev-num"><span data-count>46</span><small>franchises</small></div><span class="sp"></span><button type="button" class="btn sm" data-save-rev>${i('dashboard')}Add to dashboard</button></div>
+        <div class="rev-def" data-slot="rev-def"></div>
+        <div data-slot="rev-fn"></div>
+      </div></div>`;
+    return '';
+  }
+
+  /* ---------- Footnote rows ---------- */
+  const fbtn = (attr, label, on) => `<button type="button" class="btn sm${on ? ' on' : ''}" ${attr} aria-pressed="${!!on}">${on ? i('check') : ''}${label}</button>`;
+  const undo = attr => `<button type="button" class="btn sm ghost" ${attr}>Undo</button>`;
+  const row = (n, t, k, text, acts = '') => `<div class="fn-row">${fm(n, t)}<div class="fn-body"><span class="fn-k">${k}</span><span class="fn-t">${text}</span></div>${acts ? `<div class="fn-acts">${acts}</div>` : ''}</div>`;
+  const notes = rows => `<div class="fnote">${rows}</div>`;
+  const ASSUME = 'Weeks start Monday. Revenue is the sum of totalPrice across all 48 franchises.';
+
+  /* ---------- The revenue answer ---------- */
+  const rvSay = fn => `Revenue fell <b>${pct(LW.pct)}</b>${fn ? fm(1, 'period', 'sup') : ''} last week, from ${u.usd(LW.prev)} to ${u.usd(LW.cur)}.`;
+  function rvSub(view, fn) {
+    if (fn && view === 'full') return `Mon–Thu vs. Mon–Thu <span class="d">−${pct(F.pct)}</span><span class="was">was −${pct(LW.pct)}</span>`;
+    return `Last week vs. prior week <span class="d">−${pct(LW.pct)}</span>`;
+  }
+  function rvNotes(view, fn) {
+    if (!fn) return '';
+    const on = view === 'full';
+    return notes(
+      row(1, 'period', 'Partial week', on ? 'Comparing Monday to Thursday, the full days both weeks have.' : 'Data ends Fri, May 17 at 11:48 AM, so last week is missing most of Friday and the weekend.',
+        fbtn('data-fix="full"', 'Compare full days only', on) + (on ? undo('data-fix="undo"') : '')) +
+      row(2, 'def', 'Assumptions', ASSUME));
+  }
+
+  /* ---------- Save dialog ---------- */
+  function modal(m) {
+    return `<div class="scrim"></div><div class="modal" role="dialog" aria-modal="true" aria-label="Add to dashboard">
+      <h2>Add to dashboard <span class="x">${i('x')}</span></h2>
+      <div class="field"><label>Dashboard</label><div class="select">${DASH} ${i('chevD')}</div></div>
+      <div class="ai-box">
+        <div class="ai-box-h"><span class="ai-t">${spark()}Footnotes</span><span class="ai-s">Shown on the widget for every viewer. Rechecked on each refresh.</span></div>
+        <div class="row"><span class="cbx">${i('check')}</span>${fm(1, 'period')}<span class="grow"><b>Partial week</b><span class="muted"> · Data ends Fri, May 17, 11:48 AM</span></span></div>
+        <div class="row"><span class="cbx">${i('check')}</span>${fm(2, 'def')}<span class="grow"><b>Assumptions</b><span class="muted"> · Weeks start Mon; revenue = SUM(totalPrice)</span></span></div>
+      </div>
+      <div class="opt-row"><div><div>Save the revenue definition to agent instructions</div><div class="muted">Future answers use the same definition.</div></div><span class="switch${m.lock ? ' on' : ''}" data-switch role="switch" aria-checked="${!!m.lock}"></span></div>
+      <div class="opt-row"><div><div>Include footnotes in PDF exports and email subscriptions</div><div class="muted">For readers who see this dashboard in their inbox.</div></div><span class="switch on" role="switch" aria-checked="true"></span></div>
+      <div class="modal-f"><span class="btn">Cancel</span><button type="button" class="btn primary" data-add>Add</button></div>
+    </div>`;
+  }
+
+  /* ---------- Dashboard ---------- */
+  /* Dashboard: the existing AI/BI layout (header, page tab, filter bar, canvas,
+     counter + line widgets). Footnotes add markers, tooltips and one line per widget. */
+  const wActs = () => `<span class="w-acts"><span class="w-ico" title="Ask Genie about this chart">${spark()}</span><span class="w-ico">${i('kebab')}</span></span>`;
+  const dash = () => `<section class="scene" data-scene="dash">
+      <header class="d-head"><h1>${DASH}</h1><span class="star">${i('star')}</span><span class="sp"></span>
+        <span class="d-meta" data-slot="d-meta"></span>
+        <button type="button" class="btn" data-ask><span class="sparkle">${spark()}</span>Ask Genie</button><span class="btn primary">Share</span><span class="w-ico">${i('kebab')}</span></header>
+      <div class="d-tabs"><span class="d-tab on">Overview</span></div>
+      <div class="d-canvas">
+        <div class="d-filters"><span class="d-filter">${i('calendar')}Date <b>May 1 – May 17, 2024</b>${i('chevD')}</span><span class="d-filter">${i('filter')}Franchise <b>All</b>${i('chevD')}</span></div>
+        <div class="d-grid">
+          <div class="d-col">
+            <section class="widget counter"><div class="w-h"><span class="w-t">Revenue, last week</span>${wActs()}</div><div class="ct-wrap" data-slot="k-body"></div><div data-slot="k-fn"></div></section>
+            <div class="w-rev-slot" data-slot="w-rev"></div>
+          </div>
+          <section class="widget w-chart"><div class="w-h"><span class="w-t">Weekly revenue</span>${wActs()}</div><div class="chart" id="w-line" style="height:392px"></div><div data-slot="w-fn"></div></section>
+          <div class="w-top-slot" data-slot="w-top"></div>
+        </div>
+      </div>
+      <div data-slot="msg"></div>
+      <div data-slot="panel"></div>
+    </section>`;
+  const dMeta = fn => fn ? `${i('clock')}Data through May 17, 11:48 AM<span class="dot">·</span>${i('refresh')}Refreshed 3:42 PM` : `${i('refresh')}Refreshed 3:42 PM`;
+  const line1 = (n, t, text, acts = '', more = '') => `<div class="wfn">${fm(n, t)}<span class="wfn-t">${text}</span><span class="wfn-a">${acts}${more}</span></div>`;
+  const lnk = (attr, label, on) => `<button type="button" class="lnk-btn${on ? ' on' : ''}" ${attr}>${label}</button>`;
+  function kBody(view, fn) {
+    const on = fn && view === 'full';
+    return `<div class="ct">
+      <div class="ct-v"><span data-kn>${u.usd(on ? F.cur : LW.cur)}</span>${fn ? fm(1, 'period') : ''}</div>
+      <div class="ct-c"><span class="down">▼ <span data-kp>${on ? pct(F.pct) : pct(LW.pct)}</span></span>${on ? 'vs. Mon–Thu, prior week' : 'vs. prior week'}</div>
+    </div>`;
+  }
+  const kNotes = (view, fn) => !fn ? '' : (view === 'full'
+    ? line1(1, 'period', 'Full days only: Mon–Thu, both weeks.', lnk('data-kfix="undo"', 'Undo'))
+    : line1(1, 'period', 'Data ends Fri 11:48 AM.', lnk('data-kfix="full"', 'Compare full days')));
+  const wSub = () => '';
+  const wNotes = (fn, view) => !fn ? '' : (view === 'perday'
+    ? line1(1, 'period', 'Showing revenue per day of data, so partial weeks compare fairly.', lnk('data-wfix="undo"', 'Undo'))
+    : line1(1, 'period', 'Weeks of Apr 29 and May 13 have 5 of 7 days of data.', lnk('data-wfix="perday"', 'Show per day')));
+  const message = () => `<div class="im" role="note" aria-label="Message">
+      <span class="im-av">MC</span><div><div class="im-n">Maya Chen <span>VP Sales · 9:14 AM</span></div>
+      <div class="im-t">Revenue is down ${pct(LW.pct)} week over week? I need a recovery plan by end of day.</div></div></div>`;
+
+  function panel(p) {
+    if (!p) return '';
+    let b = `<div class="msg-user">Why did revenue drop ${pct(LW.pct)} last week?</div>`;
+    if (p === 2) b += typing();
+    if (p >= 3) b += `<div class="msg-genie enter">${who(false)}
+      <div class="say">Mostly, it didn't. Last week's data ends Friday at 11:48 AM. On the full days both weeks have, Monday to Thursday, revenue is down <b>${pct(F.pct)}</b>.</div>
+      <div class="cmp"><span class="k">Mon–Thu, May 6–9</span><span class="v">${u.usd(F.prev)}</span><span class="k">Mon–Thu, May 13–16</span><span class="v">${u.usd(F.cur)}</span><span class="k">Change</span><span class="v d">−${pct(F.pct)}</span></div>
+      <div class="note-bar">${fm(1, 'period')}Based on footnote 1 on this widget</div></div>`;
+    return `<aside class="panel" aria-label="Ask Genie"><div class="panel-h">${spark()}Genie<span class="tag">Revenue, last week</span><span class="x">${i('x')}</span></div>
+      <div class="panel-b">${b}</div><div class="panel-in">Ask a follow-up…</div></aside>`;
+  }
+
+  /* ---------- Top 5 franchises by positive reviews ----------
+     Footnote 1 flags the definition and offers a small picker; footnote 2 flags the tie at the cutoff. */
+  const T = D.top5;
+  const KW = R.keywords.slice(0, -1).join(', ') + ' or ' + R.keywords.slice(-1);
+  const DEFS = {
+    word: { label: 'Contains the word “positive”', n: T.matchWord, text: 'A review counts as positive only if it contains the word “positive.” 2 of 48 franchises match.', short: 'Positive means the review contains the word “positive.”' },
+    ai: { label: 'Positive sentiment', sub: 'ai_analyze_sentiment', n: T.ai.match, text: 'Each review is classified with ai_analyze_sentiment. A review counts when the model rates its tone as favorable, not negative, neutral or mixed.', short: 'Positive means an AI model rates the review’s tone as favorable (ai_analyze_sentiment).' },
+    kw: { label: 'Mentions a positive keyword', sub: 'good, great, excellent…', n: T.matchKw, text: `A review is positive if it mentions ${KW}.`, short: 'Positive means the review mentions good, great, excellent or another of 7 keywords.' }
+  };
+  const tTitle = (def, rank, fn) => `Top franchises by ${fn && def !== 'word' && rank === 'share' ? 'share of positive reviews' : 'positive reviews'}${fn ? fm(1, 'def', 'sup') : ''}`;
+  function tSay(def, rank, fn) {
+    const d = fn ? def : 'word';
+    if (d === 'ai' && rank === 'share') return `Five franchises share the highest rate of positive reviews: <b>2 of 3</b> each.`;
+    if (d === 'ai') return `Six franchises tie for first with <b>2 positive reviews</b> each.`;
+    if (d === 'kw' && rank === 'share') return `Six franchises have only positive reviews, each based on just 3 reviews.`;
+    if (d === 'kw') return `<b>Dough Dreamers</b> and <b>Fukuoka Fancies</b> lead with 4 positive reviews each. ${T.tied.length} franchises tie for third.`;
+    return `The top franchises by positive reviews are <b>Crust Couture</b> and <b>The Baking Lab</b>, with 1 positive review each.`;
+  }
+  const tSub = (def, rank, fn) => !fn || def === 'word' ? 'Positive review count' : rank === 'share' ? 'Share of each franchise’s reviews that are positive' : 'Positive reviews, out of each franchise’s total';
+  function picker(def, rank, scope, up) {
+    const opt = (attr, on, label, sub, n, dis) => `<button type="button" class="opt${on ? ' on' : ''}" ${attr}${dis ? ' disabled' : ''}><span class="rd"></span><span>${label}${sub ? `<small>${sub}</small>` : ''}</span><span class="n">${n == null ? '' : n}</span></button>`;
+    return `<div class="pop pop-pick${up ? ' pop-up' : ''}" role="dialog" aria-label="Change definition">
+      <div class="pop-h">A positive review</div>
+      ${['ai', 'kw'].map(k => opt(`data-tdef="${k}"`, def === k, DEFS[k].label, DEFS[k].sub, DEFS[k].n)).join('')}
+      <div class="pop-h">Rank franchises by</div>
+      ${opt(`data-trank="count"`, rank === 'count', 'Number of positive reviews', '', null, def === 'word')}
+      ${opt(`data-trank="share"`, rank === 'share', 'Share of reviews that are positive', '', null, def === 'word')}
+      <div class="pop-f">Counts are franchises with at least one positive review. ${scope === 'reader' ? 'Changes your view only.' : 'Applies to this answer.'}</div>
+    </div>`;
+  }
+  function tiesList(c, up) {
+    const val = c.share ? '100%' : c.rows[c.tieFrom][1];
+    return `<div class="pop pop-ties${up ? ' pop-up' : ''}"><div class="pop-h">${c.tied.length} franchises tied at ${c.tiedLabel}</div>
+      <div class="ties">${c.tied.map((t, k) => `<div class="tie${k < c.shown ? ' shown' : ''}"><span>${t[0]}</span><span class="muted">${c.share ? 3 : val} of ${t[1]}</span></div>`).join('')}</div>
+      <div class="pop-f">Sorted alphabetically. The chart shows the first ${c.shown === 3 ? 'three' : 'five'} (●).</div></div>`;
+  }
+  const tieKicker = c => `Tie at #${c.rankAt}`;
+  const tieText = c => `${c.tied.length} franchises have ${c.tiedLabel}${c.share ? ', each with only 3 reviews' : ''}. ${c.shown === 3 ? 'Three' : 'Five'} are shown, picked alphabetically.`;
+  function tNotes(def, rank, fn, pop, ties) {
+    if (!fn) return '';
+    const c = T.cfg(def, rank);
+    const change = `<span class="def-wrap">${fbtn('data-tpop', 'Change', pop)}${pop ? picker(def, rank, 'author') : ''}</span>`;
+    let rows = row(1, 'def', 'Definition', DEFS[def].text, change);
+    if (c.tied) rows += row(2, 'period', tieKicker(c), tieText(c), `<span class="def-wrap">${fbtn('data-ties', `Show all ${c.tied.length}`, ties)}${ties ? tiesList(c) : ''}</span>`);
+    else if (c.small) rows += row(2, 'thin', 'Small samples', 'Each of these five has only 3 reviews, so one more review could change the order.');
+    return notes(rows);
+  }
+  function topWidget(fn, def, rank, pop, ties) {
+    const head = t => `<div class="w-h"><span class="w-t">${t}</span>${wActs()}</div>`;
+    if (!fn) return `<section class="widget w-top">${head('Top Franchises by Positive Review Count')}<div class="chart" id="w-top" style="height:220px"></div></section>`;
+    const c = T.cfg(def, rank), share = def !== 'word' && rank === 'share', mine = def !== 'ai' || rank !== 'count';
+    const change = `<span class="def-wrap">${lnk('data-tpop', 'Change')}${pop ? picker(def, rank, 'reader', true) : ''}</span>${mine ? lnk('data-treset', 'Reset') : ''}`;
+    const defLine = line1(1, 'def', DEFS[def].short + (share ? ' Ranked by share.' : ''), change);
+    const tieLine = c.tied ? line1(2, 'period', `${tieKicker(c)}: ${c.tied.length} franchises have ${c.tiedLabel}.`, `<span class="def-wrap">${lnk('data-ties', `Show all ${c.tied.length}`, ties)}${ties ? tiesList(c, true) : ''}</span>`)
+      : c.small ? line1(2, 'thin', 'Small samples: each has only 3 reviews.') : '';
+    return `<section class="widget w-top rw-w">${head(`Top 5 franchises by ${share ? 'share of positive reviews' : 'positive reviews'}${fm(1, 'def', 'sup')}${mine ? '<span class="tag blue" style="margin-left:8px">Your view</span>' : ''}`)}
+      <div class="chart" id="w-top" style="height:220px"></div>
+      ${defLine}${tieLine}
+    </section>`;
+  }
+
+  /* ---------- Reviews widget on the dashboard ----------
+     The author picked a definition when saving. The widget flags it (footnote 1)
+     and keeps other definitions one small click away, as the reader's own view. */
+  const AUTHOR_DEF = 'most';
+  function revWidget(id, fn, pop, open) {
+    const head = `<div class="w-h"><span class="w-t">Franchises with positive reviews</span>${wActs()}</div>`;
+    if (!fn) return `<section class="widget counter">${head}<div class="ct-wrap"><div class="ct"><div class="ct-v"><span data-rcount>46</span></div><div class="ct-c">franchises</div></div></div></section>`;
+    const d = R.defs.find(x => x.id === id), mine = id !== AUTHOR_DEF;
+    const menu = pop ? `<div class="pop pop-up"><div class="pop-h">Other definitions · your view only</div>${R.defs.map(x => `<button type="button" class="opt${x.id === id ? ' on' : ''}" data-rdef="${x.id}"><span class="rd"></span><span>${x.label}</span><span class="n">${x.n}</span></button>`).join('')}
+      <div class="pop-f">A review is positive if it mentions ${R.keywords.slice(0, -1).join(', ')} or ${R.keywords.slice(-1)}.</div></div>` : '';
+    const more = `<button type="button" class="more" data-rmore aria-expanded="${!!open}">${open ? 'Less' : '+1'}</button>`;
+    return `<section class="widget counter rw-w">${head}
+      <div class="ct-wrap"><div class="ct"><div class="ct-v"><span data-rcount>${d.n}</span>${fm(1, 'def')}</div><div class="ct-c">of ${R.totalFranchises} franchises${mine ? '<span class="tag blue">Your view</span>' : ''}</div></div></div>
+      ${line1(1, 'def', `${d.label}`, `<span class="def-wrap">${lnk('data-rpop', 'Change')}${menu}</span>${mine ? lnk('data-rreset', 'Reset') : ''}`, more)}
+      ${open ? line1(2, 'thin', `${R.nThree} of ${R.totalFranchises} have only 3 reviews.`) : ''}
+    </section>`;
+  }
+
+  /* ---------- Reviews answer in chat ---------- */
+  const def = r => R.defs.find(d => d.id === r.def);
+  const revSay = r => `<b>${def(r).n} franchises</b> ${def(r).sub}${fm(1, 'def', 'sup')}.`;
+  function revDef(r) {
+    return `<div class="def"><button type="button" class="def-btn" data-def>${fm(1, 'def')}Definition: <b>${def(r).label}</b>${i('chevD')}</button>
+      ${r.pop ? `<div class="pop"><div class="pop-h">Count franchises with</div>${R.defs.map(d => `<button type="button" class="opt${d.id === r.def ? ' on' : ''}" data-opt="${d.id}"><span class="rd"></span><span>${d.label}</span><span class="n">${d.n}</span></button>`).join('')}
+        <div class="pop-f">A review is positive if it mentions ${R.keywords.slice(0, -1).join(', ')} or ${R.keywords.slice(-1)}.</div></div>` : ''}</div>`;
+  }
+  const revNotes = r => notes(
+    row(1, 'def', 'Definition', `${def(r).label}. Counts change with the definition: ${R.defs.map(d => d.n).join(', ')}.`, fbtn('data-def', 'Change definition', r.pop)) +
+    row(2, 'thin', 'Small samples', `${R.nThree} of ${R.totalFranchises} franchises have only 3 reviews.`));
+
+  /* ---------- Chapter card + end ---------- */
+  const chapter = t => `<div class="chapter" aria-hidden="true"><span>${t}</span></div>`;
+  const end = () => `<section class="end"><div class="end-in"><h1>Genie <span>Footnotes</span></h1><p>Databricks PM Prototype</p><p class="by">Spurti Nimbali</p><button type="button" class="btn" data-walk="restart">Watch again</button></div></section>`;
+
+  return { tTitle, tSay, tSub, tNotes, topWidget, dMeta, shell, chat, home, thread, msg, rvSay, rvSub, rvNotes, modal, dash, kBody, kNotes, wSub, wNotes, message, panel, revWidget, revSay, revDef, revNotes, chapter, end, def };
+})();
+
+</script>
+<script>/* js/05-story.js */
+/* The story: chapter 1 shows today's product, chapter 2 the same moments with Footnotes.
+   One beat per Next. A beat is a list of state patches and pauses (ms). */
+FN.story = (function () {
+  const Q1 = 'How did revenue change last week?';
+  const Q2 = 'What are the top 5 franchises by positive reviews?';
+
+  const initial = () => ({
+    scene: 'chat', nav: 'genie',
+    chat: { home: true, draft: '', msgs: [] },
+    fn: false, rv: { view: 'weekly' },
+    modal: null, toast: null,
+    dash: { fn: false, msg: false, kview: 'weekly', wview: 'totals', panel: 0, top: false, tdef: 'ai', trank: 'count', tpop: false, ties: false, tmore: false },
+    rev: { fn: true, def: 'any', pop: false },
+    top: { fn: true, def: 'ai', rank: 'count', pop: false, ties: false },
+    chapter: null, cmp: 'after',
+    hint: '[data-q="rev"]'
+  });
+  const drop = (s, key) => { s.chat.msgs = s.chat.msgs.filter(m => m.key !== key); };
+
+  const beats = [
+    /* 0 · Today: Genie home */
+    [],
+    /* 1 · Today: Genie's answer */
+    [s => { s.chat.draft = Q1; s.hint = null; }, 900,
+      s => { s.chat.home = false; s.chat.draft = ''; s.chat.msgs = [{ key: 'u1', type: 'user', text: Q1 }]; }, 380,
+      s => { s.chat.msgs.push({ key: 't1', type: 'typing' }); }, 1200,
+      s => { drop(s, 't1'); s.chat.msgs.push({ key: 'a1', type: 'rev' }); s.hint = '[data-save]'; }],
+    /* 2 · Today: on the dashboard, an exec reads −38% */
+    [s => { s.scene = 'dash'; s.nav = 'dash'; s.hint = null; }, 1100,
+      s => { s.dash.msg = true; }],
+    /* 3 · With Footnotes: the same answer */
+    [s => { s.scene = 'chat'; s.nav = 'genie'; s.chapter = 'With Footnotes'; }, 1300,
+      s => { s.chapter = null; }, 200,
+      s => { s.fn = true; s.hint = '[data-fix="full"]'; }],
+    /* 4 · Compare full days only: −38% becomes −5% */
+    [s => { s.rv.view = 'full'; s.hint = '[data-save]'; }],
+    /* 5 · Save: footnotes go with the chart */
+    [s => { s.rv.view = 'weekly'; s.modal = { lock: false }; s.hint = null; }, 900,
+      s => { s.modal.lock = true; s.hint = '[data-add]'; }],
+    /* 6 · The same dashboard, with Footnotes */
+    [s => { s.modal = null; s.scene = 'dash'; s.nav = 'dash'; s.dash.msg = true; s.hint = null; }, 700,
+      s => { s.dash.fn = true; s.dash.msg = false; }, 1100,
+      s => { s.toast = 'Added to Weekly business review'; }, 2200,
+      s => { s.toast = null; s.hint = '[data-kfix="full"]'; }],
+    /* 7 · A reader checks comparable days */
+    [s => { s.dash.kview = 'full'; s.hint = '[data-ask]'; }],
+    /* 8 · Ask Genie starts from the footnote */
+    [s => { s.dash.panel = 1; s.hint = null; }, 450,
+      s => { s.dash.panel = 2; }, 1400,
+      s => { s.dash.panel = 3; }],
+    /* 9 · Top 5: positive sentiment, with the tie at #1 flagged (Before shows Genie's literal-word answer) */
+    [s => { s.scene = 'chat'; s.nav = 'genie'; s.dash.panel = 0; s.chat = { home: false, draft: '', msgs: [{ key: 'u2', type: 'user', text: Q2 }] }; s.hint = null; }, 380,
+      s => { s.chat.msgs.push({ key: 't2', type: 'typing' }); }, 1200,
+      s => { drop(s, 't2'); s.chat.msgs.push({ key: 'a2', type: 'top5' }); s.hint = '[data-save-top]'; }],
+    /* 10 · On the dashboard */
+    [s => { s.scene = 'dash'; s.nav = 'dash'; s.dash.panel = 0; s.dash.top = true; s.top.ties = false; s.top.pop = false; s.hint = null; }, 600,
+      s => { s.toast = 'Added to Weekly business review'; }, 2200,
+      s => { s.toast = null; s.hint = '[data-ties]'; }],
+    /* 11 · A reader opens the tie */
+    [s => { s.dash.ties = true; s.hint = null; }],
+    /* 12 · End */
+    [s => { s.scene = 'end'; s.hint = null; }]
+  ];
+
+  const chapters = [
+    { id: 'today', label: 'Today', beats: [0, 1, 2] },
+    { id: 'after', label: 'With Footnotes', beats: [3, 4, 5, 6, 7, 8, 9, 10, 11, 12] }
+  ];
+
+  return { initial, beats, chapters, Q1, Q2 };
+})();
+
+</script>
+<script>/* js/99-app.js */
+/* Engine: plays beats forward with motion; Back and jumps rebuild state instantly.
+   Before/after changes on the same screen play as a wipe. */
+(function () {
+  const u = FN.u, ui = FN.ui, story = FN.story, C = FN.charts;
+  const params = new URLSearchParams(location.search);
+  const STATIC = params.has('static');
+  const reduced = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const N = story.beats.length;
+  const $ = (q, r = document) => r.querySelector(q);
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+  let state = story.initial(), cur = 0, epoch = 0, playing = false, instantNow = false, wiping = false;
+  let R = {};
+
+  function stateAt(i) {
+    const s = story.initial();
+    for (let k = 1; k <= i; k++) for (const step of story.beats[k]) if (typeof step === 'function') step(s);
+    s.chapter = null;
+    return s;
+  }
+
+  /* Footnotes on, for the current screen, after the before/after toggle */
+  function fnOn(s) {
+    const raw = s.scene === 'dash' ? s.dash.fn : s.scene === 'chat' ? (s.chat.msgs.some(m => m.type === 'top5') ? s.top.fn : s.fn) : false;
+    return raw && s.cmp !== 'before';
+  }
+  function canCompare(s) {
+    if (s.scene === 'end') return false;
+    return s.scene === 'dash' ? s.dash.fn : s.chat.msgs.some(m => m.type === 'top5') || s.fn;
+  }
+
+  /* ---------- Navigation ---------- */
+  function jump(i) {
+    epoch++; playing = false;
+    cur = Math.max(0, Math.min(N - 1, i));
+    state = stateAt(cur);
+    renderInstant(); walk();
+  }
+  async function forward() {
+    if (cur >= N - 1) return;
+    if (playing || state.cmp === 'before') { state = stateAt(cur); renderInstant(); }
+    const my = ++epoch;
+    cur++; walk();
+    if (STATIC || reduced()) { state = stateAt(cur); renderInstant(); walk(); return; }
+    playing = true;
+    for (const step of story.beats[cur]) {
+      if (my !== epoch) return;
+      if (typeof step === 'number') await sleep(step);
+      else { step(state); render(); }
+    }
+    if (my === epoch) { playing = false; walk(); }
+  }
+  function compare(v) {
+    if (!canCompare(state) || state.cmp === v || playing) return;
+    state.cmp = v; render(); walk();
+  }
+  function walk() {
+    document.querySelectorAll('.tl-dot').forEach(d => {
+      const b = +d.dataset.go;
+      d.classList.toggle('done', b < cur); d.classList.toggle('cur', b === cur);
+      if (b === cur) d.setAttribute('aria-current', 'step'); else d.removeAttribute('aria-current');
+    });
+    story.chapters.forEach(c => $(`[data-ch="${c.id}"]`).classList.toggle('on', c.beats.includes(cur)));
+    $('[data-walk="prev"]').disabled = cur === 0;
+    $('[data-walk="next"]').disabled = cur === N - 1;
+    const ba = $('[data-ba]');
+    ba.hidden = !canCompare(state);
+    ba.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.cmp === state.cmp)));
+    if (!STATIC) history.replaceState(null, '', '#' + cur);
+  }
+
+  /* ---------- Rendering ---------- */
+  function renderInstant() {
+    instantNow = true; C.setInstant(true);
+    document.body.classList.add('no-anim');
+    render();
+    if (STATIC) return;
+    requestAnimationFrame(() => requestAnimationFrame(() => { document.body.classList.remove('no-anim'); instantNow = false; C.setInstant(false); }));
+  }
+  function slot(name, html) {
+    const el = $(`[data-slot="${name}"]`);
+    if (el && el.__h !== html) { el.innerHTML = html; el.__h = html; }
+  }
+
+  function snapshot() {
+    const sc = $('#stage > .scene'); if (!sc) return null;
+    const th0 = sc.querySelector('.thread'), top0 = th0 ? th0.scrollTop : 0;
+    const cl = sc.cloneNode(true);
+    cl.__top = top0;
+    const a = sc.querySelectorAll('canvas'), b = cl.querySelectorAll('canvas');
+    a.forEach((c, k) => { try { b[k].getContext('2d').drawImage(c, 0, 0); } catch (e) { /* noop */ } });
+    cl.querySelectorAll('*').forEach(e => { [...e.attributes].forEach(at => { if (at.name === 'id' || at.name.startsWith('data-')) e.removeAttribute(at.name); }); });
+    cl.classList.remove('enter-scene'); cl.classList.add('wipe-old');
+    return cl;
+  }
+  function wipe(cl) {
+    const stage = $('#stage');
+    const line = document.createElement('div'); line.className = 'wipe-line';
+    stage.append(cl, line);
+    const th = cl.querySelector('.thread'); if (th) { th.style.scrollBehavior = 'auto'; th.scrollTop = cl.__top || 0; }
+    cl.getBoundingClientRect();
+    requestAnimationFrame(() => { cl.style.clipPath = 'inset(0 0 0 100%)'; line.style.left = '100%'; line.style.opacity = '0.0'; });
+    setTimeout(() => { cl.remove(); line.remove(); }, 1150);
+  }
+
+  function render() {
+    document.querySelectorAll('[data-nav]').forEach(n => n.classList.toggle('on', n.dataset.nav === state.nav));
+    const stage = $('#stage');
+    const mode = state.scene + ':' + (fnOn(state) ? 1 : 0);
+    let snap = null, snapAfter = false;
+    if (R.scene !== state.scene) {
+      const html = state.scene === 'chat' ? ui.chat() : state.scene === 'dash' ? ui.dash() : ui.end();
+      [...stage.children].forEach(c => { if (!c.classList.contains('wipe-old') && !c.classList.contains('wipe-line')) c.remove(); });
+      stage.insertAdjacentHTML('afterbegin', html + '<div id="ov"></div>');
+      if (!instantNow && stage.firstElementChild) stage.firstElementChild.classList.add('enter-scene');
+      R = { scene: state.scene, home: null, draft: '', mode, chapter: R.chapter };
+      if (state.chapter) { C.setInstant(true); snapAfter = true; }
+    } else if (R.mode !== mode && !instantNow) {
+      snap = snapshot();
+      C.setInstant(true);
+      wiping = true;
+    }
+    R.mode = mode;
+    if (state.scene === 'chat') renderChat();
+    if (state.scene === 'dash') renderDash();
+    if (snap) { C.setInstant(false); wipe(snap); wiping = false; }
+    if (snapAfter && !instantNow) C.setInstant(false);
+    renderOverlays();
+    if (state.chapter !== R.chapter) { if (state.chapter && !instantNow) showChapter(state.chapter); R.chapter = state.chapter; }
+    hint();
+    C.prune();
+  }
+
+  function renderChat() {
+    const body = $('[data-body]');
+    if (R.home !== state.chat.home) { body.innerHTML = state.chat.home ? ui.home() : ui.thread(); R.home = state.chat.home; R.draft = ''; }
+    if (state.chat.home) {
+      if (state.chat.draft !== R.draft) { type($('[data-input]'), state.chat.draft); R.draft = state.chat.draft; }
+      return;
+    }
+    const col = $('[data-col]');
+    [...col.children].forEach(el => { if (!state.chat.msgs.some(m => m.key === el.dataset.key)) el.remove(); });
+    state.chat.msgs.forEach(m => {
+      if (col.querySelector(`[data-key="${m.key}"]`)) return;
+      const t = document.createElement('div'); t.innerHTML = ui.msg(m).trim();
+      const el = t.firstElementChild; el.dataset.key = m.key;
+      if (!instantNow) el.classList.add('enter');
+      col.appendChild(el);
+    });
+    const on = fnOn(state);
+    if ($('#c-rv')) {
+      const v = on ? state.rv.view : 'weekly';
+      slot('rv-say', ui.rvSay(on));
+      slot('rv-sub', ui.rvSub(v, on));
+      slot('rv-fn', ui.rvNotes(v, on));
+      C.set($('#c-rv'), C.weeks(v, on));
+    }
+    if ($('#c-top')) {
+      const t = state.top, def = on ? t.def : 'word';
+      slot('t-title', ui.tTitle(def, t.rank, on));
+      slot('t-say', ui.tSay(def, t.rank, on));
+      slot('t-sub', ui.tSub(def, t.rank, on));
+      slot('t-fn', ui.tNotes(def, t.rank, on, t.pop, t.ties));
+      C.set($('#c-top'), C.top5(def, t.rank, on));
+    }
+    if ($('[data-slot="rev-def"]')) {
+      slot('rev-say', on ? ui.revSay(state.rev) : `<b>46 franchises</b> have positive reviews.`);
+      slot('rev-def', on ? ui.revDef(state.rev) : '');
+      slot('rev-fn', on ? ui.revNotes(state.rev) : '');
+      count($('[data-count]'), on ? ui.def(state.rev).n : 46);
+    }
+    const th = $('[data-thread]');
+    const fast = instantNow || wiping;
+    if (th) {
+      if (wiping) setTimeout(() => th.scrollTo({ top: th.scrollHeight, behavior: 'smooth' }), 1050);
+      else if (fast) { th.style.scrollBehavior = 'auto'; th.scrollTop = th.scrollHeight; th.style.scrollBehavior = ''; }
+      else requestAnimationFrame(() => th.scrollTo({ top: th.scrollHeight, behavior: 'smooth' }));
+    }
+  }
+
+  function renderDash() {
+    const on = fnOn(state), d = state.dash;
+    const kv = on ? d.kview : 'weekly', wv = on ? d.wview : 'totals';
+    const prevK = R.kv;
+    slot('d-meta', ui.dMeta(on));
+    slot('k-body', ui.kBody(kv, on));
+    slot('k-fn', ui.kNotes(kv, on));
+    if (prevK && prevK !== kv && !instantNow && !wiping) {
+      const F = FN.DATA.fullDays, LW = FN.DATA.lastWeek;
+      const a = prevK === 'full' ? [F.cur, Math.abs(F.pct)] : [LW.cur, Math.abs(LW.pct)];
+      const b = kv === 'full' ? [F.cur, Math.abs(F.pct)] : [LW.cur, Math.abs(LW.pct)];
+      tween($('[data-kn]'), a[0], b[0], v => u.usd(v));
+      tween($('[data-kp]'), a[1], b[1], v => Math.round(v) + '%');
+    }
+    R.kv = kv;
+    slot('w-fn', ui.wNotes(on, wv));
+    C.set($('#w-line'), C.weeks(wv === 'perday' ? 'perday' : 'weekly', on, true));
+    slot('msg', d.msg && !on ? ui.message() : '');
+    const rw = $('[data-slot="w-rev"]');
+    const hadRev = rw && rw.__h;
+    const wt = $('[data-slot="w-top"]'), hadTop = wt && wt.__h;
+    slot('w-top', d.top ? ui.topWidget(on, d.tdef, d.trank, d.tpop, d.ties) : '');
+    if (d.top && $('#w-top')) {
+      C.set($('#w-top'), C.top5(on ? d.tdef : 'word', d.trank, on));
+      const cv = $('.d-canvas');
+      if (!hadTop) { if (instantNow || wiping) cv.scrollTop = cv.scrollHeight; else setTimeout(() => cv.scrollTo({ top: cv.scrollHeight, behavior: 'smooth' }), 150); }
+      else if (instantNow) cv.scrollTop = cv.scrollHeight;
+    }
+    requestAnimationFrame(() => C.resize());
+    if (rw && d.rev) {
+      const sec = rw.firstElementChild;
+      if (!hadRev && sec && !instantNow && !wiping) sec.classList.add('enter');
+      count($('[data-rcount]'), on ? ui.def({ def: d.rdef }).n : 46);
+    }
+    const p = $('[data-slot="panel"]');
+    if (!d.panel || !on) { p.innerHTML = ''; return; }
+    const html = ui.panel(d.panel);
+    if (!p.querySelector('.panel')) p.innerHTML = html;
+    else {
+      const t = document.createElement('div'); t.innerHTML = html;
+      const nb = t.querySelector('.panel-b').innerHTML, b = p.querySelector('.panel-b');
+      if (b.__h !== nb) { b.innerHTML = nb; b.__h = nb; }
+    }
+  }
+
+  function renderOverlays() {
+    const ov = $('#ov'); if (!ov) return;
+    const m = ov.querySelector('.modal');
+    if (state.modal && !m) ov.insertAdjacentHTML('beforeend', ui.modal(state.modal));
+    if (state.modal && m) { const sw = m.querySelector('[data-switch]'); sw.classList.toggle('on', state.modal.lock); sw.setAttribute('aria-checked', String(state.modal.lock)); }
+    if (!state.modal && m) { ov.querySelector('.scrim').remove(); m.remove(); }
+    const t = ov.querySelector('.toast');
+    if (state.toast && !t) ov.insertAdjacentHTML('beforeend', `<div class="toast" role="status">${FN.icon('checkCircle')}${u.esc(state.toast)}</div>`);
+    if (!state.toast && t) t.remove();
+  }
+
+  function showChapter(text) {
+    const el = document.createElement('div'); el.innerHTML = ui.chapter(text);
+    const ch = el.firstElementChild; $('#stage').appendChild(ch);
+    setTimeout(() => ch.remove(), 1500);
+  }
+  function hint() {
+    document.querySelectorAll('.hint').forEach(e => e.classList.remove('hint'));
+    if (state.hint && !STATIC && state.cmp !== 'before') { const e = $(state.hint); if (e) e.classList.add('hint'); }
+  }
+  function type(el, text) {
+    if (!el) return;
+    const up = FN.icon('up');
+    if (!text) { el.innerHTML = `<span class="ph">Ask your question…</span>${up}`; return; }
+    if (instantNow) { el.innerHTML = `<span class="draft">${u.esc(text)}</span>${up}`; return; }
+    const my = epoch; let n = 0;
+    (function tick() {
+      if (my !== epoch) return;
+      n = Math.min(text.length, n + 2);
+      el.innerHTML = `<span class="draft">${u.esc(text.slice(0, n))}<span class="caret"></span></span>${up}`;
+      if (n < text.length) setTimeout(tick, 16);
+    })();
+  }
+  function tween(el, from, to, fmt) {
+    if (!el) return;
+    const t0 = performance.now(), dur = 620;
+    (function f(t) {
+      const k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+      el.textContent = fmt(from + (to - from) * e);
+      if (k < 1) requestAnimationFrame(f);
+    })(t0);
+  }
+  function count(el, to) {
+    if (!el) return;
+    const from = el.__n == null ? to : el.__n; el.__n = to;
+    if (instantNow || from === to) { el.textContent = to; return; }
+    const t0 = performance.now(), dur = 520;
+    (function f(t) {
+      const k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+      el.textContent = Math.round(from + (to - from) * e);
+      if (k < 1) requestAnimationFrame(f);
+    })(t0);
+  }
+
+  /* ---------- Input ---------- */
+  function onClick(e) {
+    const w = e.target.closest('[data-walk],[data-go],[data-cmp]');
+    if (w) {
+      if (w.dataset.go) jump(+w.dataset.go);
+      else if (w.dataset.cmp) compare(w.dataset.cmp);
+      else { const a = w.dataset.walk; if (a === 'next') forward(); else if (a === 'prev') jump(cur - 1); else jump(0); }
+      return;
+    }
+    if (state.hint && state.cmp !== 'before' && e.target.closest(state.hint)) { forward(); return; }
+    const t = e.target.closest('[data-fix],[data-kfix],[data-wfix],[data-opt],[data-def],[data-switch],[data-tpop],[data-tdef],[data-trank],[data-treset],[data-ties],[data-tmore]');
+    if (!t || playing) return;
+    if (t.dataset.fix) state.rv.view = t.dataset.fix === 'undo' || state.rv.view === 'full' ? 'weekly' : 'full';
+    else if (t.dataset.kfix) state.dash.kview = t.dataset.kfix === 'undo' || state.dash.kview === 'full' ? 'weekly' : 'full';
+    else if (t.dataset.wfix) state.dash.wview = t.dataset.wfix === 'undo' || state.dash.wview === 'perday' ? 'totals' : 'perday';
+    else if (t.hasAttribute('data-tpop')) { const o = state.scene === 'dash' ? state.dash : state.top; const k = state.scene === 'dash' ? 'tpop' : 'pop'; o[k] = !o[k]; }
+    else if (t.dataset.tdef || t.dataset.trank) {
+      const dash = state.scene === 'dash', o = dash ? state.dash : state.top;
+      if (t.dataset.tdef) { o[dash ? 'tdef' : 'def'] = t.dataset.tdef; if (t.dataset.tdef === 'word') o[dash ? 'trank' : 'rank'] = 'count'; }
+      if (t.dataset.trank) o[dash ? 'trank' : 'rank'] = t.dataset.trank;
+      o.ties = false;
+    }
+    else if (t.hasAttribute('data-treset')) { Object.assign(state.dash, { tdef: 'ai', trank: 'count', tpop: false, ties: false }); }
+    else if (t.hasAttribute('data-ties')) { if (state.scene === 'dash') state.dash.ties = !state.dash.ties; else state.top.ties = !state.top.ties; }
+    else if (t.hasAttribute('data-tmore')) state.dash.tmore = !state.dash.tmore;
+    else if (t.dataset.opt) { state.rev.def = t.dataset.opt; }
+    else if (t.dataset.rdef) { state.dash.rdef = t.dataset.rdef; state.dash.rpop = false; }
+    else if (t.hasAttribute('data-rpop')) state.dash.rpop = !state.dash.rpop;
+    else if (t.hasAttribute('data-rreset')) { state.dash.rdef = 'most'; state.dash.rpop = false; }
+    else if (t.hasAttribute('data-def')) state.rev.pop = !state.rev.pop;
+    else if (t.hasAttribute('data-switch') && state.modal) state.modal.lock = !state.modal.lock;
+    render();
+  }
+  function onKey(e) {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'Enter') { e.preventDefault(); forward(); }
+    else if (e.key === 'ArrowLeft') jump(cur - 1);
+    else if (e.key === 'b' || e.key === 'B') compare(state.cmp === 'before' ? 'after' : 'before');
+    else if (e.key === 'r' || e.key === 'R') jump(0);
+  }
+
+  function boot() {
+    document.body.insertAdjacentHTML('afterbegin', ui.shell(story.beats, story.chapters));
+    document.addEventListener('click', onClick);
+    document.addEventListener('keydown', onKey);
+    window.addEventListener('resize', () => C.resize());
+    const start = parseInt(params.get('beat') || location.hash.slice(1) || '0', 10) || 0;
+    jump(start);
+    if (params.get('cmp') === 'before') { state.cmp = 'before'; renderInstant(); walk(); }
+    if (!STATIC && cur === 0) setTimeout(() => showChapter('Today'), 250);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+})();
+
+</script>
+</body>
+</html>
